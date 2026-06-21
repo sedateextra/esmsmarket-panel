@@ -1266,10 +1266,31 @@ function setChartMode(mode,btn){
 function renderChart(){
   const ctx=document.getElementById("trend-chart");if(!ctx)return;
   const active=transactions.filter(t=>!t.cancelled);
-  const mData=[38000,45000,42000,51000,48000,55000,62000,58000,67000,71000,68000,active.reduce((s,t)=>s+t.amount,0)||74000];
-  const wData=[12000,15000,11000,18000,14000,16000,19000];
-  const labels=chartMode==="monthly"?["Tem","Ağu","Eyl","Eki","Kas","Ara","Oca","Şub","Mar","Nis","May","Haz"]:["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
-  const data=chartMode==="monthly"?mData:wData;
+  // Gerçek verilerden aylık/haftalık hesapla
+  const now2=new Date();
+  let labels=[], data=[];
+  if(chartMode==="monthly"){
+    for(let i=11;i>=0;i--){
+      const d=new Date(now2.getFullYear(),now2.getMonth()-i,1);
+      labels.push(d.toLocaleDateString("tr-TR",{month:"short"}));
+      const income=active.filter(t=>{
+        if(!t.created_at)return false;
+        const td=new Date(t.created_at);
+        return td.getFullYear()===d.getFullYear()&&td.getMonth()===d.getMonth();
+      }).reduce((s,t)=>s+t.amount,0);
+      data.push(income);
+    }
+  } else {
+    for(let i=6;i>=0;i--){
+      const d=new Date(now2);d.setDate(d.getDate()-i);
+      labels.push(d.toLocaleDateString("tr-TR",{weekday:"short"}));
+      const income=active.filter(t=>{
+        if(!t.created_at)return false;
+        return new Date(t.created_at).toDateString()===d.toDateString();
+      }).reduce((s,t)=>s+t.amount,0);
+      data.push(income);
+    }
+  }
   if(trendChart) trendChart.destroy();
   trendChart=new Chart(ctx,{type:"line",data:{labels,datasets:[{data,borderColor:"#8b5cf6",backgroundColor:"rgba(139,92,246,0.1)",borderWidth:2,pointRadius:3,pointBackgroundColor:"#8b5cf6",tension:0.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"rgba(22,22,42,.95)",borderColor:"rgba(139,92,246,.3)",borderWidth:1,callbacks:{label:c=>"₺"+Math.round(c.parsed.y).toLocaleString("tr-TR")}}},scales:{x:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:10}}},y:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:10},callback:v=>"₺"+Math.round(v/1000)+"K"}}}}});
 }
