@@ -862,7 +862,11 @@ async function addLog(action, detail, target){
 }
 
 // SESSION
-function resetSession(){sessionSecondsLeft=30*60;document.getElementById("timeout-warning").style.display="none";}
+function resetSession(){
+  sessionSecondsLeft=30*60;
+  document.getElementById("timeout-warning").style.display="none";
+  if(currentUser) localStorage.setItem("esms_login_time", Date.now().toString());
+}
 document.addEventListener("click", resetSession);
 document.addEventListener("keydown", resetSession);
 
@@ -891,6 +895,8 @@ async function doLogin(){
   const p = document.getElementById("login-pass").value;
   if(USERS[u] && USERS[u].pass===p){
     currentUser = u;
+    localStorage.setItem("esms_user", u);
+    localStorage.setItem("esms_login_time", Date.now().toString());
     document.getElementById("login-screen").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
     document.getElementById("current-user-label").textContent = u;
@@ -913,6 +919,8 @@ async function doLogout(auto=false){
   if(sessionInterval) clearInterval(sessionInterval);
   await addLog("login", auto?"Oturum zaman aşımı":"Sistemden çıkış","—");
   currentUser = null;
+  localStorage.removeItem("esms_user");
+  localStorage.removeItem("esms_login_time");
   document.getElementById("dashboard").classList.add("hidden");
   document.getElementById("login-screen").classList.remove("hidden");
   document.getElementById("login-user").value="";
@@ -1819,9 +1827,29 @@ async function deleteLog(id){
 // ============================================================
 // BAŞLAT
 // ============================================================
-window.addEventListener("load",()=>{
-  showLoading(false);
-  document.getElementById("login-screen").classList.remove("hidden");
+window.addEventListener("load", async ()=>{
+  showLoading(true);
+  const savedUser = localStorage.getItem("esms_user");
+  const loginTime = parseInt(localStorage.getItem("esms_login_time")||"0");
+  const sessionValid = savedUser && USERS[savedUser] && (Date.now() - loginTime < 30*60*1000);
+  
+  if(sessionValid){
+    currentUser = savedUser;
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    document.getElementById("current-user-label").textContent = savedUser;
+    const av = document.getElementById("user-avatar");
+    av.textContent = USERS[savedUser].initials;
+    av.style.background = USERS[savedUser].avatarBg;
+    await loadAll();
+    startSessionTimer();
+    initDash();
+  } else {
+    localStorage.removeItem("esms_user");
+    localStorage.removeItem("esms_login_time");
+    showLoading(false);
+    document.getElementById("login-screen").classList.remove("hidden");
+  }
 });
 </script>
 </body>
