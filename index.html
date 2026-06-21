@@ -695,8 +695,8 @@ tr:hover td{background:var(--card2)}
             </select>
           </div>
           <table>
-            <colgroup><col style="width:18%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:14%"><col style="width:21%"></colgroup>
-            <thead><tr><th>Kullanıcı</th><th>Borç</th><th>Ödenen</th><th>Kalan</th><th>Son tarih</th><th>Durum</th><th></th></tr></thead>
+            <colgroup><col style="width:15%"><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:16%"><col style="width:18%"></colgroup>
+            <thead><tr><th>Kullanıcı</th><th>Borç</th><th>Ödenen</th><th>Kalan</th><th>Son tarih</th><th>Durum</th><th>Eklenme</th><th></th></tr></thead>
             <tbody id="borc-body"></tbody>
           </table>
           <div id="no-borc" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz borçlu kaydı yok.</div>
@@ -832,17 +832,19 @@ function showLoading(v){document.getElementById("loading-overlay").style.display
 async function loadAll(){
   showLoading(true);
   try {
-    const [cRes, tRes, eRes, lRes, bRes] = await Promise.all([
+    const [cRes, tRes, eRes, lRes, bRes, borRes] = await Promise.all([
       db.from("customers").select("*").order("id", {ascending:false}),
       db.from("transactions").select("*").order("created_at", {ascending:false}),
       db.from("expenses").select("*").order("created_at", {ascending:false}),
       db.from("logs").select("*").order("created_at", {ascending:false}),
-      db.from("bonus_rules").select("*")
+      db.from("bonus_rules").select("*"),
+      db.from("borclar").select("*").order("created_at", {ascending:false})
     ]);
     customers = (cRes.data||[]).map(c=>({...c, notes: c.notes||[]}));
     transactions = tRes.data||[];
     expenses = eRes.data||[];
     logs = lRes.data||[];
+    borclar = (borRes.data||[]).map(b=>({...b, payments: b.payments||[]}));
     bonusRules = {};
     (bRes.data||[]).forEach(r=>{ bonusRules[r.type]=r; });
     if(!bonusRules["Havale"]) bonusRules = {
@@ -1495,6 +1497,7 @@ function renderBorcular(){
     const kalan = (b.amount||0) - (b.paid||0);
     const due = b.due ? new Date(b.due) : null;
     const overdue = due && due < today && b.status !== "Ödendi";
+    const createdDate = b.created_at ? new Date(b.created_at).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+new Date(b.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}) : "—";
     return `<tr>
       <td style="font-weight:600">${b.name}</td>
       <td style="font-weight:700;color:var(--danger)">${fmt(b.amount)}</td>
@@ -1502,6 +1505,7 @@ function renderBorcular(){
       <td style="font-weight:700;color:${kalan>0?"var(--warning)":"var(--success)"}">${fmt(kalan)}</td>
       <td style="font-size:11px;color:${overdue?"var(--danger)":"var(--text3)"}">${b.due||"—"}${overdue?' <i class="ti ti-alert-circle" style="color:var(--danger)"></i>':""}</td>
       <td><span class="sbadge" style="${statusStyle(b.status)}">${b.status}</span></td>
+      <td style="font-size:11px;color:var(--text3)">${createdDate}</td>
       <td><div class="inline-actions">
         <button class="btn-xs" onclick="openBorcPayment(${b.id})" title="Ödeme al" style="border-color:rgba(16,185,129,.4);color:var(--success)"><i class="ti ti-cash"></i></button>
         <button class="btn-xs" onclick="openBorcModal(${b.id})" title="Düzenle"><i class="ti ti-edit"></i></button>
@@ -1613,15 +1617,19 @@ function saveBorc(){
   const status = document.getElementById("borc-status-input").value;
   const note = document.getElementById("borc-note").value.trim();
   if(!name||!amount){alert("İsim ve borç tutarı zorunludur.");return;}
+  showLoading(true);
   if(borcEditId){
+    await db.from("borclar").update({name,amount,paid,due,status,note}).eq("id",borcEditId);
     const b = borclar.find(x=>x.id===borcEditId);
     Object.assign(b,{name,amount,paid,due,status,note});
     addLog("edit","Borç güncellendi — "+fmt(amount),name);
   } else {
-    const newB = {id:Date.now(),name,amount,paid,due,status,note,createdAt:nowStr(),payments:[]};
-    borclar.unshift(newB);
+    const newB = {name,amount,paid:paid||0,due,status,note,payments:[]};
+    const {data} = await db.from("borclar").insert(newB).select();
+    if(data&&data[0]) borclar.unshift({...data[0], payments: data[0].payments||[]});
     addLog("add","Borçlu eklendi — "+fmt(amount),name);
   }
+  showLoading(false);
   closeBorcModal();
   renderBorcular();
 }
@@ -1629,8 +1637,11 @@ function saveBorc(){
 function deleteBorc(id){
   const b = borclar.find(x=>x.id===id);
   if(!confirm(`"${b.name}" borç kaydı silinsin mi?`))return;
+  showLoading(true);
+  await db.from("borclar").delete().eq("id",id);
   borclar = borclar.filter(x=>x.id!==id);
   addLog("delete","Borçlu silindi",b.name);
+  showLoading(false);
   renderBorcular();
 }
 
@@ -1659,7 +1670,10 @@ function saveBorcPayment(){
   b.payments.push({amount:amt,note,date:nowStr()});
   if(b.paid>=b.amount) b.status="Ödendi";
   else if(b.paid>0) b.status="Kısmi ödendi";
+  showLoading(true);
+  await db.from("borclar").update({paid:b.paid,status:b.status,payments:b.payments}).eq("id",b.id);
   addLog("add",`Ödeme alındı — ${fmt(amt)}`,b.name);
+  showLoading(false);
   closeBorcPayment();
   renderBorcular();
 }
