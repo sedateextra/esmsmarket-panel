@@ -796,8 +796,8 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // KULLANICILAR (şifreler burada — production'da backend'e taşı)
 // ============================================================
 const USERS = {
-  saim:   {pass:"krAl123lords", role:"Yönetici", color:"#8b5cf6", initials:"S", avatarBg:"linear-gradient(135deg,#8b5cf6,#6d28d9)"},
-  "çetin":{pass:"Kaptanalex123.", role:"Yönetici", color:"#ec4899", initials:"Ç", avatarBg:"linear-gradient(135deg,#ec4899,#db2777)"}
+  jordan:{pass:"krAl123lords", role:"Yönetici", color:"#8b5cf6", initials:"J", avatarBg:"linear-gradient(135deg,#8b5cf6,#6d28d9)"},
+  brad:  {pass:"Kaptanalex123.", role:"Yönetici", color:"#ec4899", initials:"B", avatarBg:"linear-gradient(135deg,#ec4899,#db2777)"}
 };
 
 let currentUser = null;
@@ -1609,7 +1609,7 @@ function calcBorcKalan(){
   }
 }
 
-function saveBorc(){
+async function saveBorc(){
   const name = document.getElementById("borc-name").value.trim();
   const amount = parseFloat(document.getElementById("borc-amount").value)||0;
   const paid = parseFloat(document.getElementById("borc-paid-input").value)||0;
@@ -1617,26 +1617,34 @@ function saveBorc(){
   const status = document.getElementById("borc-status-input").value;
   const note = document.getElementById("borc-note").value.trim();
   if(!name||!amount){alert("İsim ve borç tutarı zorunludur.");return;}
+  showLoading(true);
   if(borcEditId){
+    await db.from("borclar").update({name,amount,paid,due,status,note}).eq("id",borcEditId);
     const b = borclar.find(x=>x.id===borcEditId);
     Object.assign(b,{name,amount,paid,due,status,note});
     addLog("edit","Borç güncellendi — "+fmt(amount),name);
   } else {
-    const newB = {id:Date.now(),name,amount,paid,due,status,note,createdAt:nowStr(),payments:[]};
-    borclar.unshift(newB);
+    const newB = {name,amount,paid:paid||0,due,status,note,payments:[]};
+    const {data} = await db.from("borclar").insert(newB).select();
+    if(data&&data[0]) borclar.unshift({...data[0], payments: data[0].payments||[]});
     addLog("add","Borçlu eklendi — "+fmt(amount),name);
   }
+  showLoading(false);
   closeBorcModal();
   renderBorcular();
 }
 
-function deleteBorc(id){
+async function deleteBorc(id){
   const b = borclar.find(x=>x.id===id);
   if(!confirm(`"${b.name}" borç kaydı silinsin mi?`))return;
+  showLoading(true);
+  await db.from("borclar").delete().eq("id",id);
   borclar = borclar.filter(x=>x.id!==id);
   addLog("delete","Borçlu silindi",b.name);
+  showLoading(false);
   renderBorcular();
 }
+
 
 function openBorcPayment(id){
   borcPaymentTargetId = id;
@@ -1663,7 +1671,10 @@ async function saveBorcPayment(){
   b.payments.push({amount:amt,note,date:nowStr()});
   if(b.paid>=b.amount) b.status="Ödendi";
   else if(b.paid>0) b.status="Kısmi ödendi";
+  showLoading(true);
+  await db.from("borclar").update({paid:b.paid,status:b.status,payments:b.payments}).eq("id",b.id);
   addLog("add",`Ödeme alındı — ${fmt(amt)}`,b.name);
+  showLoading(false);
   closeBorcPayment();
   renderBorcular();
 }
