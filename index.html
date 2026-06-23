@@ -790,6 +790,28 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
+  <!-- ONAY MODALI -->
+  <div id="confirm-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:center;justify-content:center">
+    <div style="background:var(--card2);border:1px solid var(--border2);border-radius:16px;padding:1.75rem;width:380px;max-width:94%;box-shadow:0 0 40px rgba(139,92,246,.2)">
+      <div style="text-align:center;margin-bottom:1.25rem">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(236,72,153,.2));border:1px solid rgba(139,92,246,.3);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+          <i class="ti ti-shield-check" style="font-size:24px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text"></i>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">İşlemi Onaylıyor musunuz?</div>
+        <div style="font-size:12px;color:var(--text3)">Aşağıdaki bilgileri kontrol edin</div>
+      </div>
+      <div id="confirm-details" style="background:var(--bg2);border-radius:12px;padding:1rem;margin-bottom:1.25rem;display:flex;flex-direction:column;gap:10px"></div>
+      <div style="display:flex;gap:10px">
+        <button id="confirm-cancel-btn" onclick="closeConfirm(false)" style="flex:1;font-size:13px;padding:11px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-weight:500">
+          <i class="ti ti-x" style="margin-right:5px"></i>İptal
+        </button>
+        <button id="confirm-ok-btn" onclick="closeConfirm(true)" style="flex:1;font-size:13px;font-weight:700;padding:11px;border-radius:10px;border:none;background:var(--grad);color:#fff;cursor:pointer">
+          <i class="ti ti-check" style="margin-right:5px"></i>Onayla
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- LOG -->
   <div id="page-log" class="page">
     <div class="srow" style="margin-bottom:1rem">
@@ -1305,16 +1327,19 @@ async function addTransaction(){
   const bonus=calcBonusAmt(amt,type);
   const total=amt+bonus;
 
-  // Onay adımı
-  const bonusText = bonus>0 ? `\n🎁 Bonus: +${fmt(bonus)} (%${Math.round((bonus/amt)*100)})\n💎 Toplam: ${fmt(total)}` : "";
-  const confirmed = confirm(
-    `İşlemi onaylıyor musunuz?\n\n` +
-    `👤 Üye: ${cust.name} (${cust.id})\n` +
-    `💰 Tutar: ${fmt(amt)}` + bonusText + `\n` +
-    `💳 Yöntem: ${type}\n` +
-    `${note ? "📝 Not: "+note : ""}\n\n` +
-    `Onaylamak için Tamam'a basın.`
-  );
+  // Özel onay modali
+  const confirmDetails = [
+    {icon:"ti-user", label:"Üye", value:cust.name+" ("+cust.id+")", bg:"rgba(139,92,246,.15)", color:"var(--purple)"},
+    {icon:"ti-coin", label:"Yatırım tutarı", value:fmt(amt), bg:"rgba(16,185,129,.15)", color:"var(--success)", valueColor:"var(--success)"},
+  ];
+  if(bonus>0){
+    confirmDetails.push({icon:"ti-gift", label:"Bonus ("+Math.round((bonus/amt)*100)+"%)", value:"+"+fmt(bonus), bg:"rgba(245,158,11,.15)", color:"var(--warning)", valueColor:"var(--warning)"});
+    confirmDetails.push({icon:"ti-trophy", label:"Toplam", value:fmt(total), bg:"rgba(139,92,246,.15)", color:"var(--purple)", valueColor:"var(--purple)"});
+  }
+  confirmDetails.push({icon:"ti-credit-card", label:"Yöntem", value:type, bg:"rgba(59,130,246,.15)", color:"var(--info)"});
+  if(note) confirmDetails.push({icon:"ti-notes", label:"Not", value:note, bg:"rgba(255,255,255,.05)", color:"var(--text2)"});
+
+  const confirmed = await showConfirm(confirmDetails);
   if(!confirmed) return;
   showLoading(true);
   const tx={cust_id:custId,cust_name:cust.name,amount:amt,bonus,total,type,note,date:todayStr(),user_name:currentUser,cancelled:false};
@@ -2147,6 +2172,40 @@ function renderDashboard(){
   if(dbHourChart)dbHourChart.destroy();
   dbHourChart=new Chart(hourCtx,{type:"bar",data:{labels:hourLabels,datasets:[{data:hourData,backgroundColor:"rgba(139,92,246,0.5)",borderRadius:4,hoverBackgroundColor:"rgba(236,72,153,0.7)"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"rgba(22,22,42,.95)",callbacks:{title:i=>[i[0].label+":00"],label:c=>[c.parsed.y+" işlem"]}}},scales:{x:{grid:{display:false},ticks:{color:"#5a5a7a",font:{size:9}}},y:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:9},stepSize:1}}}}});
 }
+
+// ============================================================
+// ÖZEL ONAY MODALI
+// ============================================================
+let confirmResolve = null;
+
+function showConfirm(details){
+  return new Promise(resolve => {
+    confirmResolve = resolve;
+    const el = document.getElementById("confirm-details");
+    el.innerHTML = details.map(d => `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:30px;height:30px;border-radius:8px;background:${d.bg||"var(--bg)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ${d.icon}" style="font-size:14px;color:${d.color||"var(--text2)"}"></i>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">${d.label}</div>
+          <div style="font-size:13px;font-weight:600;color:${d.valueColor||"var(--text)"}">${d.value}</div>
+        </div>
+      </div>`).join("");
+    document.getElementById("confirm-overlay").style.display = "flex";
+  });
+}
+
+function closeConfirm(result){
+  document.getElementById("confirm-overlay").style.display = "none";
+  if(confirmResolve) confirmResolve(result);
+  confirmResolve = null;
+}
+
+// Close on overlay click
+document.getElementById("confirm-overlay").addEventListener("click", function(e){
+  if(e.target===this) closeConfirm(false);
+});
 
 // ============================================================
 // TEMA
