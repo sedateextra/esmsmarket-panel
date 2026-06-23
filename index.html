@@ -601,11 +601,15 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
   <div id="page-kasa" class="page">
 
     <!-- ÜST METRİKLER -->
-    <div class="kasa-metrics">
-      <div class="metric"><div class="lbl"><i class="ti ti-arrow-up-circle"></i>Toplam gelir</div><div class="val kval-income" id="k-income">₺0</div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-gift"></i>Bonus maliyeti</div><div class="val kval-bonus" id="k-bonus">₺0</div><div class="sub" id="k-bonus-sub"></div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-arrow-down-circle"></i>Toplam gider</div><div class="val kval-expense" id="k-expense">₺0</div></div>
-      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-scale"></i>Net kasa</div><div class="val" id="k-net">₺0</div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px">
+      <div class="metric"><div class="lbl"><i class="ti ti-arrow-up-circle" style="color:var(--success)"></i>Toplam gelir</div><div class="val kval-income" id="k-income">₺0</div><div class="sub" id="k-income-sub"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-arrow-down-circle" style="color:var(--danger)"></i>Toplam gider</div><div class="val kval-expense" id="k-expense">₺0</div><div class="sub" id="k-expense-sub"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div><div class="val kval-bonus" id="k-bonus">₺0</div><div class="sub" id="k-bonus-sub"></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
+      <div class="metric"><div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--warning)"></i>Shopier komisyonu</div><div class="val" id="k-komisyon" style="color:var(--warning)">₺0</div><div class="sub" id="k-komisyon-sub"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--purple)"></i>İşlem yapan üye</div><div class="val" id="k-uye-count" style="color:var(--purple)">0</div><div class="sub" id="k-uye-sub"></div></div>
+      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-scale"></i>Net kasa</div><div class="val" id="k-net">₺0</div><div class="sub" id="k-net-sub"></div></div>
     </div>
 
     <!-- ÖDEME YÖNTEMİ SEKMELERİ -->
@@ -629,6 +633,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           <div style="display:flex;gap:5px">
             <button class="btn-sm" id="btn-monthly" onclick="setChartMode('monthly',this)" style="font-size:11px;padding:4px 9px;border-color:var(--purple);color:var(--purple)">Aylık</button>
             <button class="btn-sm" id="btn-weekly" onclick="setChartMode('weekly',this)" style="font-size:11px;padding:4px 9px">Haftalık</button>
+            <button class="btn-sm" id="btn-daily" onclick="setChartMode('daily',this)" style="font-size:11px;padding:4px 9px">Günlük</button>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
@@ -1618,14 +1623,30 @@ function updateKasaMetrics(){
   const totalBonus=active.reduce((s,t)=>s+t.bonus,0);
   const totalExpense=expenses.reduce((s,e)=>s+e.amount,0);
   const net=totalIncome-totalBonus-totalExpense;
-  document.getElementById("k-income").textContent=fmt(totalIncome);
-  document.getElementById("k-bonus").textContent=fmt(totalBonus);
   const shopierKomTotal=expenses.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
+  const uyeCount=new Set(active.map(t=>t.cust_id)).size;
+  const shopierTxCount=active.filter(t=>t.user_name==="shopier-bot").length;
+  const manuelTxCount=active.filter(t=>t.user_name!=="shopier-bot").length;
+
+  document.getElementById("k-income").textContent=fmt(totalIncome);
+  const incSub=document.getElementById("k-income-sub");
+  if(incSub) incSub.textContent=active.length+" işlem · "+shopierTxCount+" Shopier";
+  document.getElementById("k-bonus").textContent=fmt(totalBonus);
   const bonusSub=document.getElementById("k-bonus-sub");
-  if(bonusSub) bonusSub.textContent=active.filter(t=>t.bonus>0).length+" işlemde bonus · Shopier komisyon: "+fmt(shopierKomTotal);
+  if(bonusSub) bonusSub.textContent=active.filter(t=>t.bonus>0).length+" işlemde bonus";
   document.getElementById("k-expense").textContent=fmt(totalExpense);
+  const expSub=document.getElementById("k-expense-sub");
+  if(expSub) expSub.textContent=expenses.length+" gider kaydı";
+  document.getElementById("k-komisyon").textContent=fmt(shopierKomTotal);
+  const komSub=document.getElementById("k-komisyon-sub");
+  if(komSub) komSub.textContent=expenses.filter(e=>e.type==="Shopier Komisyon").length+" kesinti";
+  document.getElementById("k-uye-count").textContent=uyeCount;
+  const uyeSub=document.getElementById("k-uye-sub");
+  if(uyeSub) uyeSub.textContent=manuelTxCount+" manuel · "+shopierTxCount+" Shopier";
   document.getElementById("k-net").textContent=fmt(net);
   document.getElementById("k-net").style.color=net>=0?"var(--success)":"var(--danger)";
+  const netSub=document.getElementById("k-net-sub");
+  if(netSub) netSub.textContent="Gelir - Bonus - Gider";
   renderExpenseDist(totalExpense);
 
   // Sekme bazlı render
@@ -1701,7 +1722,6 @@ function setChartMode(mode,btn){
 function renderChart(){
   const ctx=document.getElementById("trend-chart");if(!ctx)return;
   const active=transactions.filter(t=>!t.cancelled);
-  // Gerçek verilerden aylık/haftalık hesapla
   const now2=new Date();
   let labels=[], data=[];
   if(chartMode==="monthly"){
@@ -1715,13 +1735,25 @@ function renderChart(){
       }).reduce((s,t)=>s+t.amount,0);
       data.push(income);
     }
-  } else {
+  } else if(chartMode==="weekly"){
     for(let i=6;i>=0;i--){
       const d=new Date(now2);d.setDate(d.getDate()-i);
       labels.push(d.toLocaleDateString("tr-TR",{weekday:"short"}));
       const income=active.filter(t=>{
         if(!t.created_at)return false;
         return new Date(t.created_at).toDateString()===d.toDateString();
+      }).reduce((s,t)=>s+t.amount,0);
+      data.push(income);
+    }
+  } else {
+    // Günlük - bugünün saatleri
+    for(let i=23;i>=0;i--){
+      const h=new Date(now2);h.setHours(now2.getHours()-i,0,0,0);
+      labels.push(String(h.getHours()).padStart(2,"0")+":00");
+      const income=active.filter(t=>{
+        if(!t.created_at)return false;
+        const td=new Date(t.created_at);
+        return td.toDateString()===now2.toDateString()&&td.getHours()===h.getHours();
       }).reduce((s,t)=>s+t.amount,0);
       data.push(income);
     }
