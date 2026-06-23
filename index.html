@@ -53,7 +53,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .user-avatar{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .badge-live{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
 .session-timer{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:4px}
-.nav{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
+.nav{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
 .nav button{font-size:11px;padding:8px 4px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;font-weight:500;flex-direction:column;width:100%}
 .nav button:hover{color:var(--text);background:rgba(139,92,246,.1)}
 .nav button.active{background:var(--grad);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.35)}
@@ -338,6 +338,10 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     <button onclick="showPage('bonus-rules',this)">
       <i class="ti ti-settings" style="font-size:16px"></i>
       <span>Hediye kuralları</span>
+    </button>
+    <button onclick="showPage('sms-takip',this)">
+      <i class="ti ti-message-2" style="font-size:16px"></i>
+      <span>SMS Takip</span>
     </button>
     <button onclick="showPage('log',this)">
       <i class="ti ti-list-details" style="font-size:16px"></i>
@@ -837,6 +841,70 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
+  <!-- SMS TAKİP -->
+  <div id="page-sms-takip" class="page">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
+      <div class="metric metric-accent">
+        <div class="lbl"><i class="ti ti-message-2" style="color:var(--purple)"></i>Toplam SMS</div>
+        <div class="val" id="sms-total" style="color:var(--purple)">0</div>
+        <div class="sub" id="sms-today">Bugün: 0</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-brand-telegram" style="color:#229ED9"></i>Telegram</div>
+        <div class="val" id="sms-tg">0</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-brand-whatsapp" style="color:#25D366"></i>WhatsApp</div>
+        <div class="val" id="sms-wa">0</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-apps" style="color:var(--warning)"></i>Diğer servisler</div>
+        <div class="val" id="sms-other">0</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;margin-bottom:12px">
+      <!-- Servis dağılımı grafik -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-chart-bar"></i>Servis bazlı SMS dağılımı</div></div>
+        <div id="sms-dist" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="no-sms-dist" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz SMS kaydı yok.</div>
+      </div>
+      <!-- Son 7 gün -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar-stats"></i>Son 7 gün</div></div>
+        <div id="sms-7days" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left"><i class="ti ti-list"></i>SMS log</div>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="sms-search" placeholder="Servis veya kod ara..." oninput="renderSmsLogs()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);width:180px">
+          <select id="sms-service-filter" onchange="renderSmsLogs()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+            <option value="">Tüm servisler</option>
+            <option value="tg">Telegram</option>
+            <option value="wa">WhatsApp</option>
+            <option value="ig">Instagram</option>
+            <option value="fb">Facebook</option>
+            <option value="tw">Twitter/X</option>
+            <option value="gg">Google</option>
+            <option value="ti">Tinder</option>
+            <option value="vk">VK</option>
+            <option value="ds">Discord</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <colgroup><col style="width:14%"><col style="width:8%"><col style="width:10%"><col style="width:30%"><col style="width:16%"><col style="width:22%"></colgroup>
+        <thead><tr><th>Servis</th><th>Ülke</th><th>Kod</th><th>Mesaj</th><th>Aktivasyon ID</th><th>Tarih / Saat</th></tr></thead>
+        <tbody id="sms-body"></tbody>
+      </table>
+      <div id="no-sms" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz SMS kaydı yok.</div>
+    </div>
+  </div>
+
   <!-- LOG -->
   <div id="page-log" class="page">
     <div class="srow" style="margin-bottom:1rem">
@@ -1025,6 +1093,7 @@ async function loadAll(){
     expenses = eRes.data||[];
     logs = lRes.data||[];
     borclar = (borRes.data||[]).map(b=>({...b, payments: b.payments||[]}));
+    await loadSmsLogs();
     bonusRules = {};
     (bRes.data||[]).forEach(r=>{ bonusRules[r.type]=r; });
     if(!bonusRules["Havale"]) bonusRules = {
@@ -1124,6 +1193,7 @@ function initDash(){
   renderLog();
   renderBorcular();
   renderDashboard();
+  renderSmsLogs();
 }
 
 function showPage(id,btn){
@@ -1135,6 +1205,7 @@ function showPage(id,btn){
   if(id==="top10") renderTop10();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
+  if(id==="sms-takip") renderSmsLogs();
 }
 
 // ============================================================
@@ -2408,6 +2479,135 @@ function renderShopier(){
       <td>${sourceBadge}</td>
       <td style="color:var(--text3);font-size:11px">${t.date}</td>
       <td style="color:var(--text3);font-size:11px">${t.note||"—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ============================================================
+// SMS TAKİP
+// ============================================================
+let smsLogs = [];
+
+async function loadSmsLogs(){
+  try {
+    const {data} = await db.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(500);
+    smsLogs = data||[];
+  } catch(e){ console.error("SMS logs error:", e); }
+}
+
+const SERVICE_ICONS = {
+  "tg":"ti-brand-telegram","wa":"ti-brand-whatsapp","ig":"ti-brand-instagram",
+  "fb":"ti-brand-facebook","tw":"ti-brand-x","gg":"ti-brand-google",
+  "ti":"ti-hearts","vk":"ti-brand-vk","ds":"ti-brand-discord",
+  "tt":"ti-brand-tiktok","ln":"ti-brand-linkedin","am":"ti-brand-amazon",
+  "ub":"ti-car","nf":"ti-movie"
+};
+const SERVICE_COLORS = {
+  "tg":"#229ED9","wa":"#25D366","ig":"#E1306C","fb":"#1877F2",
+  "tw":"#1DA1F2","gg":"#EA4335","ti":"#FF6B6B","vk":"#4680C2",
+  "ds":"#7289DA","tt":"#010101","ln":"#0A66C2","am":"#FF9900",
+  "ub":"#000000","nf":"#E50914"
+};
+
+function renderSmsLogs(){
+  const q = (document.getElementById("sms-search")?.value||"").toLowerCase();
+  const sf = document.getElementById("sms-service-filter")?.value||"";
+  
+  const filtered = smsLogs.filter(s=>{
+    const mQ = !q||(s.service_name||"").toLowerCase().includes(q)||(s.code||"").toLowerCase().includes(q)||(s.text||"").toLowerCase().includes(q);
+    const mS = !sf||s.service===sf;
+    return mQ&&mS;
+  });
+
+  // Metrikler
+  const today = new Date().toDateString();
+  const todayCount = smsLogs.filter(s=>new Date(s.created_at).toDateString()===today).length;
+  const tgCount = smsLogs.filter(s=>s.service==="tg").length;
+  const waCount = smsLogs.filter(s=>s.service==="wa").length;
+  const otherCount = smsLogs.filter(s=>s.service!=="tg"&&s.service!=="wa").length;
+
+  document.getElementById("sms-total").textContent = smsLogs.length;
+  document.getElementById("sms-today").textContent = "Bugün: "+todayCount;
+  document.getElementById("sms-tg").textContent = tgCount;
+  document.getElementById("sms-wa").textContent = waCount;
+  document.getElementById("sms-other").textContent = otherCount;
+
+  // Servis dağılımı
+  const serviceCounts = {};
+  smsLogs.forEach(s=>{
+    const name = s.service_name||s.service||"Diğer";
+    const key = s.service||"other";
+    if(!serviceCounts[key]) serviceCounts[key]={name,count:0,service:key};
+    serviceCounts[key].count++;
+  });
+  const maxCount = Math.max(...Object.values(serviceCounts).map(s=>s.count),1);
+  const distEl = document.getElementById("sms-dist");
+  const noDistEl = document.getElementById("no-sms-dist");
+  if(Object.keys(serviceCounts).length>0){
+    noDistEl.style.display="none";
+    distEl.innerHTML = Object.values(serviceCounts)
+      .sort((a,b)=>b.count-a.count)
+      .map(s=>{
+        const pct = Math.round((s.count/smsLogs.length)*100);
+        const color = SERVICE_COLORS[s.service]||"#8b5cf6";
+        const icon = SERVICE_ICONS[s.service]||"ti-message-2";
+        return `<div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:7px;background:${color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ${icon}" style="color:${color};font-size:13px"></i>
+          </div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:12px;font-weight:600;color:var(--text)">${s.name}</span>
+              <span style="font-size:11px;color:var(--text3)">${s.count} · ${pct}%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fg" style="width:${Math.round((s.count/maxCount)*100)}%;background:${color}"></div></div>
+          </div>
+        </div>`;
+      }).join("");
+  } else {
+    noDistEl.style.display="block";
+    distEl.innerHTML="";
+  }
+
+  // Son 7 gün
+  const days7El = document.getElementById("sms-7days");
+  const now = new Date();
+  const days7 = [];
+  for(let i=6;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const cnt=smsLogs.filter(s=>new Date(s.created_at).toDateString()===d.toDateString()).length;
+    days7.push({label:d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit"}),cnt});
+  }
+  const maxDay = Math.max(...days7.map(d=>d.cnt),1);
+  days7El.innerHTML = days7.map(d=>`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:var(--text3);min-width:36px">${d.label}</span>
+      <div style="flex:1;height:12px;background:var(--bg2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round((d.cnt/maxDay)*100)}%;background:linear-gradient(90deg,#8b5cf6,#ec4899);border-radius:3px"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;min-width:20px;text-align:right;color:${d.cnt>0?"var(--text)":"var(--text3)"}">${d.cnt}</span>
+    </div>`).join("");
+
+  // Tablo
+  document.getElementById("no-sms").style.display = filtered.length?"none":"block";
+  document.getElementById("sms-body").innerHTML = filtered.map(s=>{
+    const color = SERVICE_COLORS[s.service]||"#8b5cf6";
+    const icon = SERVICE_ICONS[s.service]||"ti-message-2";
+    const dt = s.created_at ? new Date(s.created_at).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+new Date(s.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "—";
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:24px;height:24px;border-radius:6px;background:${color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ${icon}" style="color:${color};font-size:12px"></i>
+          </div>
+          <span style="font-size:12px;font-weight:600">${s.service_name||s.service}</span>
+        </div>
+      </td>
+      <td style="font-size:11px;color:var(--text3)">${s.country||"—"}</td>
+      <td style="font-weight:700;color:var(--success)">${s.code||"—"}</td>
+      <td style="font-size:11px;color:var(--text2)">${(s.text||"—").substring(0,60)}${(s.text||"").length>60?"...":""}</td>
+      <td style="font-size:11px;color:var(--text3)">${s.activation_id||"—"}</td>
+      <td style="font-size:11px;color:var(--text3)">${dt}</td>
     </tr>`;
   }).join("");
 }
