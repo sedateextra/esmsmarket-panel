@@ -152,6 +152,27 @@ tr:hover td{background:var(--card2)}
 .loading-text{font-size:13px;color:var(--text2)}
 
 /* ============================================================
+   AÇIK TEMA
+   ============================================================ */
+body.light-theme{
+  --bg:#f0f2f8;
+  --bg2:#e4e7f0;
+  --card:#ffffff;
+  --card2:#f5f7fc;
+  --border:#d0d5e8;
+  --border2:#b8c0d8;
+  --text:#1a1a2e;
+  --text2:#4a4a6a;
+  --text3:#8a8aaa;
+}
+body.light-theme .login-wrap{background:radial-gradient(ellipse at 20% 50%,rgba(139,92,246,.1) 0%,transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(236,72,153,.07) 0%,transparent 60%),var(--bg)}
+body.light-theme .badge-live{background:rgba(16,185,129,.12);color:#059669}
+body.light-theme .session-timer{background:rgba(245,158,11,.08);color:#d97706}
+body.light-theme tr:hover td{background:var(--bg2)}
+body.light-theme .nav{background:var(--card2)}
+body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
+
+/* ============================================================
    MOBİL UYUMLULUK
    ============================================================ */
 @media (max-width: 768px) {
@@ -284,6 +305,7 @@ tr:hover td{background:var(--card2)}
       <div class="session-timer"><i class="ti ti-clock"></i><span id="session-timer-label">30:00</span></div>
       <div class="user-chip"><div class="user-avatar" id="user-avatar">S</div><span id="current-user-label">—</span><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(139,92,246,.2);color:var(--purple);margin-left:2px">Yönetici</span></div>
       <span class="badge-live"><span class="glow-dot" style="margin-right:5px"></span>Canlı</span>
+      <button class="btn-sm" onclick="toggleTheme()" id="theme-btn" title="Tema değiştir"><i class="ti ti-sun" id="theme-icon"></i></button>
       <button class="btn-sm" onclick="doLogout()"><i class="ti ti-logout" style="margin-right:3px"></i>Çıkış</button>
     </div>
   </div>
@@ -329,6 +351,13 @@ tr:hover td{background:var(--card2)}
 
   <!-- DASHBOARD -->
   <div id="page-dashboard" class="page active">
+
+    <!-- Telegram butonları -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn-sm" onclick="sendDailyReport()" style="border-color:#229ED9;color:#229ED9;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-brand-telegram" style="font-size:14px"></i>Günlük raporu Telegram'a gönder
+      </button>
+    </div>
 
     <!-- ÜSTTEN KARTLAR: 6 metrik -->
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px">
@@ -551,6 +580,17 @@ tr:hover td{background:var(--card2)}
       <div class="card"><div class="card-title"><div class="card-title-left"><i class="ti ti-trophy" style="color:var(--warning)"></i>En yüksek bakiyeli üyeler</div></div><div id="top10-balance"></div></div>
       <div class="card"><div class="card-title"><div class="card-title-left"><i class="ti ti-trending-up" style="color:var(--success)"></i>En çok yükleme yapanlar</div></div><div id="top10-tx"></div></div>
     </div>
+    <!-- 30 GÜN İŞLEM YAPMAYANLAR -->
+    <div class="card" style="margin-top:12px;margin-bottom:12px">
+      <div class="card-title"><div class="card-title-left"><i class="ti ti-user-off" style="color:var(--warning)"></i>30 gündür işlem yapmayan üyeler</div><span id="inactive-count" class="tbadge" style="background:rgba(245,158,11,.15);color:var(--warning);border-color:rgba(245,158,11,.3)">0 üye</span></div>
+      <table>
+        <colgroup><col style="width:12%"><col style="width:20%"><col style="width:28%"><col style="width:15%"><col style="width:25%"></colgroup>
+        <thead><tr><th>ID</th><th>Kullanıcı</th><th>E-posta</th><th>Bakiye</th><th>Son işlem / Kayıt</th></tr></thead>
+        <tbody id="inactive-body"></tbody>
+      </table>
+      <div id="no-inactive" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">30 gündür işlem yapmayan üye yok.</div>
+    </div>
+
     <div class="card" style="margin-top:12px">
       <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar-stats"></i>Bu hafta kayıt olanlar</div><span id="week-reg-count" class="tbadge">0 üye</span></div>
       <table><colgroup><col style="width:12%"><col style="width:22%"><col style="width:30%"><col style="width:18%"><col style="width:18%"></colgroup>
@@ -590,6 +630,7 @@ tr:hover td{background:var(--card2)}
       <button onclick="openExpense('İş gideri')"><i class="ti ti-briefcase"></i>İş gideri ekle</button>
       <button onclick="openExpense('Personel gideri')"><i class="ti ti-users"></i>Personel gideri ekle</button>
       <button onclick="exportKasaExcel()" style="margin-left:auto"><i class="ti ti-file-spreadsheet"></i>Kasa raporu indir</button>
+      <button onclick="exportMonthlyReport()"><i class="ti ti-file-analytics"></i>Aylık özet raporu</button>
     </div>
     <div class="overlay-wrap" id="expense-overlay">
       <div class="modal">
@@ -661,6 +702,7 @@ tr:hover td{background:var(--card2)}
         </table>
         <div class="btn-row" style="margin-top:14px">
           <button class="btn-save" onclick="applyXLImport()"><i class="ti ti-check" style="margin-right:4px"></i>Güncellemeyi uygula</button>
+          <button class="btn-save" onclick="applyXLImport(true)" style="background:linear-gradient(135deg,#229ED9,#1a7ab3)"><i class="ti ti-brand-telegram" style="margin-right:4px"></i>Uygula & Telegram'a gönder</button>
           <button class="btn-cancel" onclick="cancelXLImport()">İptal</button>
         </div>
       </div>
@@ -793,6 +835,108 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ============================================================
+// TELEGRAM
+// ============================================================
+const TG_TOKEN = "8933364198:AAEdg55SxM0R2ZudVgCQlOJ41rb2Kb8SwKE";
+const TG_CHAT_ID = "8792365962";
+
+async function sendTelegram(msg){
+  try {
+    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({chat_id:TG_CHAT_ID, text:msg, parse_mode:"HTML"})
+    });
+  } catch(e){ console.error("Telegram hatası:", e); }
+}
+
+async function tgYeniUye(c){
+  await sendTelegram(`👤 <b>Yeni Üye Kaydı</b>
+━━━━━━━━━━━━━━
+İsim: ${c.name}
+E-posta: ${c.email}
+ID: ${c.id}
+Kayıt: ${c.since||nowStr()}
+👥 Toplam üye: ${customers.length}`);
+}
+
+async function tgYatirim(tx, cust){
+  await sendTelegram(`💰 <b>Yeni Yatırım</b>
+━━━━━━━━━━━━━━
+Üye: ${tx.cust_name} (${cust?.id||""})
+Tutar: ${fmt(tx.amount)}
+Bonus: +${fmt(tx.bonus)} (%${tx.bonus>0?Math.round((tx.bonus/tx.amount)*100):0})
+Toplam: ${fmt(tx.total)}
+Yöntem: ${tx.type}
+İşlemci: ${tx.user_name}
+⏰ ${nowStr()}`);
+}
+
+async function tgBorcOdeme(b, amt){
+  const kalan = (b.amount||0)-(b.paid||0);
+  await sendTelegram(`✅ <b>Borç Ödemesi Alındı</b>
+━━━━━━━━━━━━━━
+Borçlu: ${b.name}
+Alınan: ${fmt(amt)}
+Kalan borç: ${fmt(kalan)}
+Durum: ${b.status}
+İşlemci: ${currentUser}
+⏰ ${nowStr()}`);
+}
+
+// Gece 00:00 otomatik özet
+function scheduleNightReport(){
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24,0,0,0);
+  const msUntilMidnight = midnight - now;
+  setTimeout(async ()=>{
+    await sendNightReport();
+    setInterval(sendNightReport, 24*60*60*1000);
+  }, msUntilMidnight);
+}
+
+async function sendNightReport(){
+  const today = new Date();
+  const activeTx = transactions.filter(t=>!t.cancelled);
+  const todayTx = activeTx.filter(t=>{
+    if(!t.created_at) return false;
+    return new Date(t.created_at).toDateString()===today.toDateString();
+  });
+  const monthStart = new Date(today.getFullYear(),today.getMonth(),1);
+  const monthTx = activeTx.filter(t=>{
+    if(!t.created_at) return false;
+    return new Date(t.created_at)>=monthStart;
+  });
+  const todayIncome = todayTx.reduce((s,t)=>s+t.amount,0);
+  const todayBonus = todayTx.reduce((s,t)=>s+t.bonus,0);
+  const monthIncome = monthTx.reduce((s,t)=>s+t.amount,0);
+  const totalIncome = activeTx.reduce((s,t)=>s+t.amount,0);
+  const totalBonus2 = activeTx.reduce((s,t)=>s+t.bonus,0);
+  const totalExpense = expenses.reduce((s,e)=>s+e.amount,0);
+  const netKasa = totalIncome-totalBonus2-totalExpense;
+  const pendingDebt = borclar.filter(b=>b.status!=="Ödendi").reduce((s,b)=>s+(b.amount||0)-(b.paid||0),0);
+  const todayNew = customers.filter(c=>{
+    const d = (c.since||"").split(".");
+    if(d.length!==3) return false;
+    return new Date(parseInt(d[2]),parseInt(d[1])-1,parseInt(d[0])).toDateString()===today.toDateString();
+  }).length;
+
+  await sendTelegram(`🌙 <b>ESMSMarket Gece Özeti</b>
+📅 ${today.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})}
+━━━━━━━━━━━━━━
+💰 Bugünkü gelir: <b>${fmt(todayIncome)}</b>
+🎁 Verilen bonus: <b>${fmt(todayBonus)}</b>
+📊 İşlem sayısı: <b>${todayTx.length}</b>
+👤 Yeni üye: <b>${todayNew}</b>
+━━━━━━━━━━━━━━
+💵 Aylık gelir: <b>${fmt(monthIncome)}</b>
+⚠️ Bekleyen borç: <b>${fmt(pendingDebt)}</b>
+👥 Toplam üye: <b>${customers.length}</b>
+💎 Net kasa: <b>${fmt(netKasa)}</b>`);
+}
+
+// ============================================================
 // KULLANICILAR (şifreler burada — production'da backend'e taşı)
 // ============================================================
 const USERS = {
@@ -908,6 +1052,7 @@ async function doLogin(){
     await loadAll();
     startSessionTimer();
     initDash();
+    scheduleNightReport();
     addLog("login","Sisteme giriş","—");
   } else {
     const e = document.getElementById("login-err");
@@ -1089,6 +1234,7 @@ async function saveCustomer(){
     await db.from("customers").insert(newC);
     customers.unshift(newC);
     addLog("add","Yeni üye eklendi",name);
+    tgYeniUye(newC);
   }
   showLoading(false);
   closeCustModal();renderCustomers();populateCustSelect();updateXLStats();
@@ -1176,6 +1322,7 @@ async function addTransaction(){
   cust.balance=(cust.balance||0)+total;
   await db.from("customers").update({balance:cust.balance}).eq("id",custId);
   addLog("add",`Yatırım — ${fmt(amt)}${bonus>0?" +"+fmt(bonus)+" bonus":""} (${type})`,cust.name);
+  tgYatirim(tx, cust);
   showLoading(false);
   renderNewTxTable();renderSidebar();updateKasaMetrics();renderCustomers();clearTxForm();renderTop10();
 }
@@ -1221,6 +1368,101 @@ function renderSidebar(){
 // ============================================================
 // TOP 10
 // ============================================================
+
+// ============================================================
+// AYLIK ÖZET RAPORU
+// ============================================================
+function exportMonthlyReport(){
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthName = now.toLocaleDateString("tr-TR",{month:"long",year:"numeric"});
+
+  const activeTx = transactions.filter(t=>!t.cancelled);
+  const monthTx = activeTx.filter(t=>t.created_at && new Date(t.created_at)>=monthStart);
+  const monthExp = expenses.filter(e=>e.created_at && new Date(e.created_at)>=monthStart);
+
+  const totalIncome = monthTx.reduce((s,t)=>s+t.amount,0);
+  const totalBonus = monthTx.reduce((s,t)=>s+t.bonus,0);
+  const totalExpense = monthExp.reduce((s,e)=>s+e.amount,0);
+  const netKasa = totalIncome - totalBonus - totalExpense;
+
+  // Üye başı gelir
+  const byMember = {};
+  monthTx.forEach(t=>{
+    if(!byMember[t.cust_name]) byMember[t.cust_name]={name:t.cust_name,income:0,bonus:0,txCount:0};
+    byMember[t.cust_name].income+=t.amount;
+    byMember[t.cust_name].bonus+=t.bonus;
+    byMember[t.cust_name].txCount++;
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  // Sayfa 1: Özet
+  const ozet = [
+    ["ESMSMarket Aylık Özet Raporu"],
+    ["Dönem:", monthName],
+    ["Rapor tarihi:", nowStr()],
+    [],
+    ["GELİR & GİDER"],
+    ["Toplam gelir (₺)", totalIncome],
+    ["Toplam bonus (₺)", totalBonus],
+    ["Toplam gider (₺)", totalExpense],
+    ["Net kasa (₺)", netKasa],
+    [],
+    ["İŞLEM İSTATİSTİKLERİ"],
+    ["Toplam işlem sayısı", monthTx.length],
+    ["Bonuslu işlem sayısı", monthTx.filter(t=>t.bonus>0).length],
+    ["Havale işlemi", monthTx.filter(t=>t.type==="Havale").length],
+    ["Kredi kartı işlemi", monthTx.filter(t=>t.type==="Kredi kartı").length],
+    ["Kripto işlemi", monthTx.filter(t=>t.type==="Kripto").length],
+    [],
+    ["ÜYE İSTATİSTİKLERİ"],
+    ["Toplam üye", customers.length],
+    ["Bakiyeli üye", customers.filter(c=>(c.balance||0)>0).length],
+    ["Bu ay yeni üye", customers.filter(c=>{
+      const d=(c.since||"").split(".");
+      if(d.length!==3)return false;
+      return new Date(parseInt(d[2]),parseInt(d[1])-1,parseInt(d[0]))>=monthStart;
+    }).length],
+    [],
+    ["BORÇ DURUMU"],
+    ["Toplam borçlu", borclar.length],
+    ["Ödenmemiş borç (₺)", borclar.filter(b=>b.status!=="Ödendi").reduce((s,b)=>s+(b.amount||0)-(b.paid||0),0)],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ozet), "Özet");
+
+  // Sayfa 2: İşlemler
+  if(monthTx.length){
+    const txData = [["Üye","Tutar","Bonus","Toplam","Tür","İşlemci","Tarih","Not"]];
+    monthTx.forEach(t=>txData.push([t.cust_name,t.amount,t.bonus,t.total,t.type,t.user_name,t.date,t.note||""]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txData), "İşlemler");
+  }
+
+  // Sayfa 3: Üye bazlı gelir
+  const memberData = [["Üye","Gelir (₺)","Bonus (₺)","İşlem Sayısı"]];
+  Object.values(byMember).sort((a,b)=>b.income-a.income).forEach(m=>
+    memberData.push([m.name, m.income, m.bonus, m.txCount])
+  );
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(memberData), "Üye Bazlı Gelir");
+
+  // Sayfa 4: Giderler
+  if(monthExp.length){
+    const expData = [["Kategori","Tutar","İşlemci","Tarih","Not"]];
+    monthExp.forEach(e=>expData.push([e.type,e.amount,e.user_name,e.date,e.note||""]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(expData), "Giderler");
+  }
+
+  // Sayfa 5: Borçlular
+  if(borclar.length){
+    const borcData = [["Kullanıcı","Borç","Ödenen","Kalan","Durum","Son Tarih","Not"]];
+    borclar.forEach(b=>borcData.push([b.name,b.amount,b.paid||0,(b.amount||0)-(b.paid||0),b.status,b.due||"",b.note||""]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(borcData), "Borçlular");
+  }
+
+  XLSX.writeFile(wb, `esmsmarket_aylik_rapor_${now.getFullYear()}_${String(now.getMonth()+1).padStart(2,"0")}.xlsx`);
+  addLog("add","Aylık özet raporu indirildi", monthName);
+}
+
 function renderTop10(){
   const rankClass=i=>i===0?"rank-1":i===1?"rank-2":i===2?"rank-3":"rank-other";
   const top10bal=[...customers].sort((a,b)=>(b.balance||0)-(a.balance||0)).slice(0,10);
@@ -1232,7 +1474,25 @@ function renderTop10(){
   });
   const top10tx=Object.values(txTotals).sort((a,b)=>b.total-a.total).slice(0,10);
   document.getElementById("top10-tx").innerHTML=top10tx.length?top10tx.map((c,i)=>`<div class="top10-row"><div class="top10-rank ${rankClass(i)}">${i+1}</div><div style="flex:1"><div style="font-size:12px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.count} işlem</div></div><div style="font-size:13px;font-weight:700;color:var(--purple)">${fmt(c.total)}</div></div>`).join(""):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">Henüz işlem yok.</div>';
-  const now=new Date();const weekAgo=new Date(now);weekAgo.setDate(now.getDate()-7);
+  // 30 gün işlem yapmayanlar
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(now.getDate()-30);
+  const activeCustIds = new Set(transactions.filter(t=>{
+    if(!t.created_at||t.cancelled) return false;
+    return new Date(t.created_at)>=thirtyDaysAgo;
+  }).map(t=>t.cust_id));
+  const inactives = customers.filter(c=>!activeCustIds.has(c.id));
+  document.getElementById("inactive-count").textContent = inactives.length+" üye";
+  document.getElementById("no-inactive").style.display = inactives.length?"none":"block";
+  document.getElementById("inactive-body").innerHTML = inactives.slice(0,20).map(c=>`<tr>
+    <td style="color:var(--text3);font-size:11px">${c.id}</td>
+    <td style="font-weight:600">${c.name}</td>
+    <td style="color:var(--text2);font-size:11px">${c.email}</td>
+    <td style="color:var(--success);font-weight:700">${fmt(c.balance||0)}</td>
+    <td style="color:var(--text3);font-size:11px">${c.since||"—"}</td>
+  </tr>`).join("");
+
+  const now2=new Date();const weekAgo=new Date(now2);weekAgo.setDate(now2.getDate()-7);
   const weekRegs=customers.filter(c=>{const d=parseSince(c.since||"");return d&&d>=weekAgo;});
   document.getElementById("week-reg-count").textContent=weekRegs.length+" üye";
   document.getElementById("no-week-reg").style.display=weekRegs.length?"none":"block";
@@ -1430,16 +1690,62 @@ function buildDiff(parsed){
   document.getElementById("xl-diff-body").innerHTML=diffs.map(d=>`<tr><td style="color:var(--text3)">${d.id}</td><td class="${d.status==="new"?"diff-new":d.status==="changed"?"diff-changed":"diff-same"}">${d.name}</td><td style="color:var(--text3);font-size:11px">${d.email}</td><td style="color:var(--text3)">${d.oldBalance!==null?fmt(d.oldBalance):"—"}</td><td style="font-weight:700;color:${d.status==="new"?"var(--success)":d.status==="changed"?"var(--warning)":"var(--text3)"}">${fmt(d.balance)}</td><td><span class="rbadge ${d.status==="new"?"r-add":d.status==="changed"?"r-edit":"r-login"}">${d.status==="new"?"yeni":d.status==="changed"?"güncellendi":"aynı"}</span></td></tr>`).join("");
   document.getElementById("xl-diff-section").classList.remove("hidden");
 }
-async function applyXLImport(){
+async function sendDailyReport(){
+  const today = new Date();
+  const activeTx = transactions.filter(t=>!t.cancelled);
+  const todayTx = activeTx.filter(t=>{
+    if(!t.created_at) return false;
+    return new Date(t.created_at).toDateString()===today.toDateString();
+  });
+  const todayIncome = todayTx.reduce((s,t)=>s+t.amount,0);
+  const todayBonus = todayTx.reduce((s,t)=>s+t.bonus,0);
+  const totalIncome = activeTx.reduce((s,t)=>s+t.amount,0);
+  const totalExpense = expenses.reduce((s,e)=>s+e.amount,0);
+  const totalBonus2 = activeTx.reduce((s,t)=>s+t.bonus,0);
+  const netKasa = totalIncome - totalBonus2 - totalExpense;
+  const pendingDebt = borclar.filter(b=>b.status!=="Ödendi").reduce((s,b)=>s+(b.amount||0)-(b.paid||0),0);
+  const todayNew = customers.filter(c=>{
+    if(!c.since) return false;
+    const d = c.since.split(".");
+    if(d.length!==3) return false;
+    const cd = new Date(parseInt(d[2]),parseInt(d[1])-1,parseInt(d[0]));
+    return cd.toDateString()===today.toDateString();
+  }).length;
+
+  const msg = `📊 <b>ESMSMarket Günlük Rapor</b>
+📅 ${today.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})} | ${today.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})}
+
+💰 <b>Bugünkü gelir:</b> ${fmt(todayIncome)}
+🎁 <b>Bugünkü bonus:</b> ${fmt(todayBonus)}
+👤 <b>Yeni üye:</b> ${todayNew}
+📈 <b>Bugün işlem sayısı:</b> ${todayTx.length}
+
+━━━━━━━━━━━━━━━━━━
+💵 <b>Toplam gelir:</b> ${fmt(totalIncome)}
+📉 <b>Toplam gider:</b> ${fmt(totalExpense)}
+🎁 <b>Toplam bonus:</b> ${fmt(totalBonus2)}
+💎 <b>Net kasa:</b> ${fmt(netKasa)}
+⚠️ <b>Bekleyen borç:</b> ${fmt(pendingDebt)}
+👥 <b>Toplam üye:</b> ${customers.length}`;
+
+  await sendTelegram(msg);
+  addLog("add","Günlük rapor Telegram'a gönderildi","—");
+  alert("✅ Rapor Telegram'a gönderildi!");
+}
+
+async function applyXLImport(withTelegram=false){
   if(!xlPending)return;
   showLoading(true);
   const exMap={};customers.forEach(c=>{exMap[c.id]=c;});
   let added=0,updated=0;
+  const diffChanges=[];
   for(const r of xlPending){
     const ex=exMap[r.id];
     if(ex){
       if(Math.abs((ex.balance||0)-r.balance)>0.001||ex.name!==r.name){
+        const oldBal=ex.balance||0;
         await db.from("customers").update({name:r.name,email:r.email,balance:r.balance}).eq("id",r.id);
+        diffChanges.push({name:r.name,oldBal,newBal:r.balance,diff:r.balance-oldBal,isNew:false});
         Object.assign(ex,{name:r.name,email:r.email,balance:r.balance});
         updated++;
       }
@@ -1447,13 +1753,45 @@ async function applyXLImport(){
       const newC={id:r.id,name:r.name,email:r.email,balance:r.balance,since:r.since,notes:[]};
       await db.from("customers").insert(newC);
       customers.unshift(newC);
+      diffChanges.push({name:r.name,oldBal:0,newBal:r.balance,diff:r.balance,isNew:true});
       added++;
     }
   }
   addLog("import",`Excel import — ${added} yeni, ${updated} güncellendi`,`${xlPending.length} kayıt`);
   showLoading(false);
   cancelXLImport();renderCustomers();populateCustSelect();updateXLStats();
-  alert(`Tamamlandı: ${added} yeni, ${updated} güncellendi.`);
+
+  if(withTelegram && diffChanges.length > 0){
+    const d2 = new Date();
+    let msg = "📋 <b>ESMSMarket — Excel Güncelleme Raporu</b>\n";
+    msg += "📅 "+d2.toLocaleDateString("tr-TR")+" "+d2.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})+"\n\n";
+    const increased = diffChanges.filter(d=>d.diff>0);
+    const decreased = diffChanges.filter(d=>d.diff<0);
+    const newMembers = diffChanges.filter(d=>d.isNew);
+    if(newMembers.length>0){
+      msg += "➕ <b>Yeni üyeler ("+newMembers.length+"):</b>\n";
+      newMembers.slice(0,5).forEach(d=>{msg+="• "+d.name+": "+fmt(d.newBal)+"\n";});
+      if(newMembers.length>5) msg+="...ve "+(newMembers.length-5)+" daha\n";
+      msg+="\n";
+    }
+    if(increased.length>0){
+      msg += "📈 <b>Bakiyesi artan ("+increased.length+"):</b>\n";
+      increased.slice(0,5).forEach(d=>{msg+="• "+d.name+": "+fmt(d.oldBal)+" → "+fmt(d.newBal)+" (+"+fmt(d.diff)+")\n";});
+      if(increased.length>5) msg+="...ve "+(increased.length-5)+" daha\n";
+      msg+="\n";
+    }
+    if(decreased.length>0){
+      msg += "📉 <b>Bakiyesi azalan ("+decreased.length+"):</b>\n";
+      decreased.slice(0,5).forEach(d=>{msg+="• "+d.name+": "+fmt(d.oldBal)+" → "+fmt(d.newBal)+" ("+fmt(d.diff)+")\n";});
+      if(decreased.length>5) msg+="...ve "+(decreased.length-5)+" daha\n";
+      msg+="\n";
+    }
+    msg+="━━━━━━━━━━━━━━━━━━\n👥 Toplam üye: "+customers.length+"\n💰 Toplam bakiye: "+fmt(customers.reduce((s,c)=>s+(c.balance||0),0));
+    await sendTelegram(msg);
+    addLog("add","Excel raporu Telegram'a gönderildi","—");
+  }
+
+  alert(`Tamamlandı: ${added} yeni, ${updated} güncellendi.${withTelegram?" Telegram'a gönderildi!":""}`);
 }
 function cancelXLImport(){xlPending=null;document.getElementById("xl-diff-section").classList.add("hidden");document.getElementById("xl-file").value="";}
 function updateXLStats(){
@@ -1674,6 +2012,7 @@ async function saveBorcPayment(){
   showLoading(true);
   await db.from("borclar").update({paid:b.paid,status:b.status,payments:b.payments}).eq("id",b.id);
   addLog("add",`Ödeme alındı — ${fmt(amt)}`,b.name);
+  tgBorcOdeme(b, amt);
   showLoading(false);
   closeBorcPayment();
   renderBorcular();
@@ -1826,6 +2165,24 @@ function renderDashboard(){
   dbHourChart=new Chart(hourCtx,{type:"bar",data:{labels:hourLabels,datasets:[{data:hourData,backgroundColor:"rgba(139,92,246,0.5)",borderRadius:4,hoverBackgroundColor:"rgba(236,72,153,0.7)"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"rgba(22,22,42,.95)",callbacks:{title:i=>[i[0].label+":00"],label:c=>[c.parsed.y+" işlem"]}}},scales:{x:{grid:{display:false},ticks:{color:"#5a5a7a",font:{size:9}}},y:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:9},stepSize:1}}}}});
 }
 
+// ============================================================
+// TEMA
+// ============================================================
+function toggleTheme(){
+  const isLight = document.body.classList.toggle("light-theme");
+  localStorage.setItem("esms_theme", isLight?"light":"dark");
+  document.getElementById("theme-icon").className = isLight?"ti ti-moon":"ti ti-sun";
+}
+
+function applyTheme(){
+  const saved = localStorage.getItem("esms_theme");
+  if(saved==="light"){
+    document.body.classList.add("light-theme");
+    const icon = document.getElementById("theme-icon");
+    if(icon) icon.className="ti ti-moon";
+  }
+}
+
 function renderLog(){
   const q=(document.getElementById("log-search").value||"").toLowerCase();
   const tf=document.getElementById("log-type-filter").value;
@@ -1843,6 +2200,7 @@ async function deleteLog(id){
 // BAŞLAT
 // ============================================================
 window.addEventListener("load", async ()=>{
+  applyTheme();
   showLoading(true);
   const savedUser = localStorage.getItem("esms_user");
   const loginTime = parseInt(localStorage.getItem("esms_login_time")||"0");
@@ -1859,6 +2217,7 @@ window.addEventListener("load", async ()=>{
     await loadAll();
     startSessionTimer();
     initDash();
+    scheduleNightReport();
   } else {
     localStorage.removeItem("esms_user");
     localStorage.removeItem("esms_login_time");
