@@ -2696,23 +2696,51 @@ async function loadActiveActivations(){
 
 async function loadHistory(){
   try {
-    const res = await fetch(`${HERO_BASE}?action=getHistory&api_key=${HERO_API_KEY}`);
+    const res = await fetch(`${HERO_BASE}?action=getHistory`);
     const data = await res.json();
-    heroHistory = Array.isArray(data) ? data : (data.history||[]);
-    
-    // Metrikleri güncelle
+    const rawHistory = Array.isArray(data) ? data : (data.history||[]);
+
+    // sms_logs ile ID eşleştir
+    const smsMap = {};
+    smsLogs.forEach(s=>{ if(s.activation_id) smsMap[String(s.activation_id)] = s; });
+
+    // Normalize - alan isimlerini düzelt
+    heroHistory = rawHistory.map(h=>{
+      const id = String(h.id||"");
+      const smsLog = smsMap[id]||{};
+      const svcKey = (h.service||smsLog.service||"").toLowerCase();
+      const svcName = SERVICE_NAMES[svcKey]||smsLog.service_name||svcKey||"—";
+      const rawSms = h.sms||smsLog.text||null;
+      let extractedCode = smsLog.code||null;
+      if(!extractedCode && rawSms){
+        const m = String(rawSms).match(/\d{4,8}/);
+        extractedCode = m ? m[0] : null;
+      }
+      return {
+        id,
+        service: svcKey,
+        serviceName: svcName,
+        phoneNumber: String(h.phone||"—"),
+        countryCode: h.country!=null ? parseInt(h.country) : null,
+        price: parseFloat(h.cost||0),
+        status: String(h.status||""),
+        smsCode: extractedCode,
+        smsText: rawSms,
+        createdAt: h.date||null,
+      };
+    });
+
     const today2 = new Date().toDateString();
-    const successList = heroHistory.filter(h=>h.status==="6"||h.status===6||h.smsCode);
-    const cancelList = heroHistory.filter(h=>h.status==="8"||h.status==="9"||h.status===8||h.status===9);
-    const pendingList = heroHistory.filter(h=>h.status==="1"||h.status==="2"||h.status==="3"||h.status==="4"||h.status===1||h.status===2||h.status===3||h.status===4);
+    const successList = heroHistory.filter(h=>h.status==="6"||h.status==="3"||h.smsCode);
+    const cancelList = heroHistory.filter(h=>h.status==="8"||h.status==="9");
     const todayList = heroHistory.filter(h=>h.createdAt&&new Date(h.createdAt).toDateString()===today2);
     const todaySpent = todayList.reduce((s,h)=>s+(parseFloat(h.price)||0),0);
-    
+
     document.getElementById("sms-success-count").textContent = successList.length;
     document.getElementById("sms-cancel-count").textContent = cancelList.length;
     document.getElementById("sms-today-spent").textContent = "$"+todaySpent.toFixed(2);
     document.getElementById("sms-today-count").textContent = todayList.length+" aktivasyon";
-    
+
     renderHistory();
     renderCountryStats();
   } catch(e){ console.error("History error:", e); }
