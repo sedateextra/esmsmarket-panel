@@ -930,8 +930,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <div class="card">
         <div class="card-title"><div class="card-title-left"><i class="ti ti-history"></i>Geçmiş işlemler</div><span id="history-badge" class="tbadge">0</span></div>
         <table>
-          <colgroup><col style="width:10%"><col style="width:14%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:18%"></colgroup>
-          <thead><tr><th>ID</th><th>Servis</th><th>Numara</th><th>Ülke</th><th>Fiyat</th><th>Durum</th><th>SMS Kodu</th><th>Tarih</th></tr></thead>
+          <colgroup><col style="width:14%"><col style="width:20%"><col style="width:12%"><col style="width:12%"><col style="width:14%"><col style="width:28%"></colgroup>
+          <thead><tr><th>ID</th><th>Numara</th><th>Fiyat</th><th>Durum</th><th>SMS Kodu</th><th>Tarih</th></tr></thead>
           <tbody id="history-body"></tbody>
         </table>
         <div id="no-history" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Geçmiş işlem yok.</div>
@@ -2723,20 +2723,13 @@ function renderHistory(){
   document.getElementById("history-badge").textContent = filtered.length;
   document.getElementById("no-history").style.display = filtered.length?"none":"block";
   document.getElementById("history-body").innerHTML = filtered.map(h=>{
-    const svcName = h.serviceName||h.service||"—";
-    const svcKey = (h.service||"").toLowerCase();
-    const color = SERVICE_COLORS[svcKey]||"#8b5cf6";
-    const icon = SERVICE_ICONS[svcKey]||"ti-message-2";
-    const countryName = h.countryCode!=null ? (COUNTRY_NAMES[h.countryCode]||("Ülke "+h.countryCode)) : "—";
     const sl = getStatusLabel(h.status);
-    const dt = h.createdAt ? h.createdAt.replace("T"," ").substring(0,16) : "—";
+    const dt = h.createdAt ? String(h.createdAt).replace("T"," ").substring(0,16) : "—";
     const price = parseFloat(h.price)||0;
     return `<tr>
       <td style="font-size:11px;color:var(--text3)">${h.id||"—"}</td>
-      <td><div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:5px;background:${color}20;display:flex;align-items:center;justify-content:center"><i class="ti ${icon}" style="color:${color};font-size:11px"></i></div><span style="font-size:12px;font-weight:600">${svcName||"—"}</span></div></td>
-      <td style="font-size:11px">${h.phoneNumber||"—"}</td>
-      <td style="font-size:11px;color:var(--text2)">${countryName}</td>
-      <td style="font-size:11px;color:var(--warning)">${price>0?"$"+price.toFixed(2):"—"}</td>
+      <td style="font-size:12px">${h.phoneNumber||"—"}</td>
+      <td style="font-size:11px;color:var(--warning)">${price>0?"$"+price.toFixed(4):"—"}</td>
       <td><span class="sbadge ${sl.cls}" style="font-size:10px">${sl.text}</span></td>
       <td style="font-weight:700;color:var(--success)">${h.smsCode||"—"}</td>
       <td style="font-size:11px;color:var(--text3)">${dt}</td>
