@@ -2747,7 +2747,7 @@ function renderHistory(){
 function renderCountryStats(){
   const countryMap = {};
   heroHistory.forEach(h=>{
-    const k = h.countryCode??0;
+    const k = h.countryCode!=null ? h.countryCode : 0;
     const name = COUNTRY_NAMES[k]||("Ülke "+k);
     if(!countryMap[k]) countryMap[k]={name,total:0,success:0,cancel:0,pending:0};
     countryMap[k].total++;
