@@ -2631,7 +2631,12 @@ async function fetchHeroBalance(){
       const balance = parseFloat(text.split(":")[1]);
       document.getElementById("sms-balance").textContent = "$"+balance.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
       if(balance < LOW_BALANCE_THRESHOLD){
-        sendTelegram("⚠️ Hero SMS Düşük Bakiye! Bakiye: $"+balance+" (Limit: $"+LOW_BALANCE_THRESHOLD+")");
+        const lastWarn = localStorage.getItem("hero_balance_warn");
+        const today = new Date().toDateString();
+        if(lastWarn !== today){
+          localStorage.setItem("hero_balance_warn", today);
+          sendTelegram("⚠️ Hero SMS Düşük Bakiye! Bakiye: $"+balance+" (Limit: $"+LOW_BALANCE_THRESHOLD+")");
+        }
       }
     } else if(text && text.includes("ACCESS_BALANCE")){
       const match = text.match(/ACCESS_BALANCE:([0-9.]+)/);
