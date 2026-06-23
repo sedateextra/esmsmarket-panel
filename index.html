@@ -53,7 +53,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .user-avatar{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .badge-live{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
 .session-timer{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:4px}
-.nav{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
+.nav{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
 .nav button{font-size:11px;padding:8px 4px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;font-weight:500;flex-direction:column;width:100%}
 .nav button:hover{color:var(--text);background:rgba(139,92,246,.1)}
 .nav button.active{background:var(--grad);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.35)}
@@ -323,29 +323,21 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <i class="ti ti-plus" style="font-size:16px"></i>
       <span>İşlem ekle</span>
     </button>
-    <button onclick="showPage('top10',this)">
-      <i class="ti ti-trophy" style="font-size:16px"></i>
-      <span>Top 10</span>
-    </button>
     <button onclick="showPage('kasa',this)">
       <i class="ti ti-cash" style="font-size:16px"></i>
       <span>Kasa</span>
-    </button>
-    <button onclick="showPage('bonus-rules',this)">
-      <i class="ti ti-settings" style="font-size:16px"></i>
-      <span>Bonus kuralları</span>
-    </button>
-    <button onclick="showPage('excel',this)">
-      <i class="ti ti-file-spreadsheet" style="font-size:16px"></i>
-      <span>Excel güncelle</span>
     </button>
     <button onclick="showPage('borclu',this)">
       <i class="ti ti-alert-triangle" style="font-size:16px"></i>
       <span>Borçlular</span>
     </button>
-    <button onclick="showPage('shopier',this)">
-      <i class="ti ti-brand-shopee" style="font-size:16px"></i>
-      <span>Shopier</span>
+    <button onclick="showPage('top10',this)">
+      <i class="ti ti-trophy" style="font-size:16px"></i>
+      <span>Top 10</span>
+    </button>
+    <button onclick="showPage('bonus-rules',this)">
+      <i class="ti ti-settings" style="font-size:16px"></i>
+      <span>Hediye kuralları</span>
     </button>
     <button onclick="showPage('log',this)">
       <i class="ti ti-list-details" style="font-size:16px"></i>
@@ -741,10 +733,11 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 
   <!-- BORÇLULAR -->
   <div id="page-borclu" class="page">
-    <div class="metrics-4" style="grid-template-columns:repeat(3,minmax(0,1fr))">
-      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--danger)"></i>Toplam borçlu</div><div class="val" id="b-count">0</div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-coin" style="color:var(--danger)"></i>Toplam borç</div><div class="val" id="b-total" style="color:var(--danger)">₺0</div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-coin-off"></i>Tahsil edilen</div><div class="val" id="b-paid" style="color:var(--success)">₺0</div></div>
+    <div class="metrics-4">
+      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--danger)"></i>Toplam borçlu</div><div class="val" id="b-count">0</div><div class="sub" id="b-count-sub">Aktif borçlu</div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-coin" style="color:var(--danger)"></i>Toplam borç</div><div class="val" id="b-total" style="color:var(--danger)">₺0</div><div class="sub" id="b-kalan-sub">Kalan: ₺0</div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-coin-off" style="color:var(--success)"></i>Tahsil edilen</div><div class="val" id="b-paid" style="color:var(--success)">₺0</div><div class="sub" id="b-paid-sub"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-calendar-today" style="color:var(--warning)"></i>Bugünkü borç</div><div class="val" id="b-today" style="color:var(--warning)">₺0</div><div class="sub" id="b-today-sub">Bugün eklenen</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 320px;gap:12px">
       <div>
@@ -766,8 +759,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
             </select>
           </div>
           <table>
-            <colgroup><col style="width:15%"><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:18%"><col style="width:18%"></colgroup>
-            <thead><tr><th>Kullanıcı</th><th>Borç</th><th>Ödenen</th><th>Kalan</th><th>Son tarih</th><th>Durum</th><th>Eklenme</th><th></th></tr></thead>
+            <colgroup><col style="width:18%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:18%"><col style="width:16%"></colgroup>
+            <thead><tr><th>Kullanıcı</th><th>Borç</th><th>Ödenen</th><th>Kalan</th><th>Durum</th><th>Eklenme</th><th></th></tr></thead>
             <tbody id="borc-body"></tbody>
           </table>
           <div id="no-borc" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz borçlu kaydı yok.</div>
@@ -780,12 +773,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
             <div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Kayıt yok.</div>
           </div>
         </div>
-        <div class="card" style="margin-top:12px">
-          <div class="card-title"><div class="card-title-left"><i class="ti ti-clock-hour-4" style="color:var(--danger)"></i>Geciken ödemeler</div><span id="overdue-count" class="tbadge" style="background:rgba(239,68,68,.15);color:var(--danger);border-color:rgba(239,68,68,.3)">0</span></div>
-          <div id="borc-overdue">
-            <div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Geciken ödeme yok.</div>
-          </div>
-        </div>
+
       </div>
     </div>
 
@@ -798,16 +786,13 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           <div class="frow"><label>Ödenen tutar (₺)</label><input type="number" id="borc-paid-input" placeholder="0" min="0" step="0.01" oninput="calcBorcKalan()"></div>
         </div>
         <div id="borc-kalan-info" style="font-size:12px;padding:8px 10px;border-radius:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);margin-bottom:10px;display:none"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="frow"><label>Son ödeme tarihi</label><input type="date" id="borc-due"></div>
-          <div class="frow"><label>Durum</label>
+        <div class="frow"><label>Durum</label>
             <select id="borc-status-input">
               <option value="Ödenmedi">Ödenmedi</option>
               <option value="Kısmi ödendi">Kısmi ödendi</option>
               <option value="Ödendi">Ödendi</option>
             </select>
           </div>
-        </div>
         <div class="frow"><label>Not</label><textarea id="borc-note" placeholder="Borç hakkında detay..." style="min-height:60px"></textarea></div>
         <div class="btn-row">
           <button class="btn-save" onclick="saveBorc()"><i class="ti ti-check" style="margin-right:4px"></i>Kaydet</button>
@@ -849,51 +834,6 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           <i class="ti ti-check" style="margin-right:5px"></i>Onayla
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- SHOPİER -->
-  <div id="page-shopier" class="page">
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
-      <div class="metric metric-accent">
-        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier toplam gelir</div>
-        <div class="val" id="sh-total-income" style="color:var(--success)">₺0</div>
-        <div class="sub" id="sh-tx-count">0 işlem</div>
-      </div>
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-coin" style="color:var(--danger)"></i>Toplam komisyon</div>
-        <div class="val" id="sh-total-komisyon" style="color:var(--danger)">₺0</div>
-        <div class="sub">Shopier kesintisi</div>
-      </div>
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-trending-up" style="color:var(--success)"></i>Net kazanç</div>
-        <div class="val" id="sh-net-kazanc" style="color:var(--success)">₺0</div>
-        <div class="sub">Elimize geçen</div>
-      </div>
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-users"></i>Shopier üye</div>
-        <div class="val" id="sh-member-count">0</div>
-        <div class="sub">Otomatik yükleme yapan</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        <div class="card-title-left"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier işlemleri</div>
-        <div style="display:flex;gap:6px">
-          <select id="sh-filter" onchange="renderShopier()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
-            <option value="all">Tüm işlemler</option>
-            <option value="shopier">Sadece Shopier</option>
-            <option value="manuel">Sadece Manuel</option>
-          </select>
-        </div>
-      </div>
-      <table>
-        <colgroup><col style="width:16%"><col style="width:12%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:12%"><col style="width:20%"></colgroup>
-        <thead><tr><th>Üye</th><th>Tutar</th><th>Bonus</th><th>Komisyon</th><th>Net</th><th>Kaynak</th><th>Tarih</th><th>Not</th></tr></thead>
-        <tbody id="sh-body"></tbody>
-      </table>
-      <div id="no-sh" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">İşlem yok.</div>
     </div>
   </div>
 
@@ -1184,7 +1124,6 @@ function initDash(){
   renderLog();
   renderBorcular();
   renderDashboard();
-  renderShopier();
 }
 
 function showPage(id,btn){
@@ -1196,7 +1135,6 @@ function showPage(id,btn){
   if(id==="top10") renderTop10();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
-  if(id==="shopier") renderShopier();
 }
 
 // ============================================================
@@ -2038,7 +1976,6 @@ function renderBorcular(){
       <td style="font-weight:700;color:var(--danger)">${fmt(b.amount)}</td>
       <td style="color:var(--success)">${fmt(b.paid||0)}</td>
       <td style="font-weight:700;color:${kalan>0?"var(--warning)":"var(--success)"}">${fmt(kalan)}</td>
-      <td style="font-size:11px;color:${overdue?"var(--danger)":"var(--text3)"}">${b.due||"—"}${overdue?' <i class="ti ti-alert-circle" style="color:var(--danger)"></i>':""}</td>
       <td><span class="sbadge" style="${statusStyle(b.status)}">${b.status}</span></td>
       <td style="font-size:11px;color:var(--text3)">${createdDate}</td>
       <td><div class="inline-actions">
@@ -2051,16 +1988,28 @@ function renderBorcular(){
 
   updateBorcMetrics();
   renderBorcStatusChart();
-  renderOverdue();
 }
 
 function updateBorcMetrics(){
   const active = borclar.filter(b=>b.status!=="Ödendi");
   const totalBorc = borclar.reduce((s,b)=>s+(b.amount||0),0);
   const totalPaid = borclar.reduce((s,b)=>s+(b.paid||0),0);
+  const today2 = new Date();
+  const todayBorc = borclar.filter(b=>{
+    if(!b.created_at) return false;
+    return new Date(b.created_at).toDateString()===today2.toDateString();
+  });
+  const todayBorcTotal = todayBorc.reduce((s,b)=>s+(b.amount||0),0);
+  const kalanBorc = borclar.reduce((s,b)=>s+(b.amount||0)-(b.paid||0),0);
+
   document.getElementById("b-count").textContent = active.length;
+  document.getElementById("b-count-sub").textContent = borclar.filter(b=>b.status==="Ödendi").length+" ödendi";
   document.getElementById("b-total").textContent = fmt(totalBorc);
+  document.getElementById("b-kalan-sub").textContent = "Kalan: "+fmt(kalanBorc);
   document.getElementById("b-paid").textContent = fmt(totalPaid);
+  document.getElementById("b-paid-sub").textContent = Math.round((totalPaid/Math.max(totalBorc,1))*100)+"% tahsil edildi";
+  document.getElementById("b-today").textContent = fmt(todayBorcTotal);
+  document.getElementById("b-today-sub").textContent = todayBorc.length+" borçlu bugün eklendi";
 }
 
 function renderBorcStatusChart(){
@@ -2082,28 +2031,6 @@ function renderBorcStatusChart(){
     : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Kayıt yok.</div>';
 }
 
-function renderOverdue(){
-  const today = new Date();
-  const overdue = borclar.filter(b=>{
-    if(b.status==="Ödendi") return false;
-    if(!b.due) return false;
-    return new Date(b.due) < today;
-  });
-  document.getElementById("overdue-count").textContent = overdue.length;
-  document.getElementById("borc-overdue").innerHTML = overdue.length ?
-    overdue.map(b=>{
-      const kalan = (b.amount||0)-(b.paid||0);
-      const days = Math.floor((today - new Date(b.due))/(1000*60*60*24));
-      return `<div style="padding:9px 12px;border-radius:9px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text)">${b.name}</div>
-          <div style="font-size:11px;color:var(--danger)">${days} gün gecikmiş · Son: ${b.due}</div>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:var(--danger)">${fmt(kalan)}</div>
-      </div>`;
-    }).join("")
-    : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Geciken ödeme yok.</div>';
-}
 
 function openBorcModal(id){
   borcEditId = id||null;
@@ -2113,14 +2040,12 @@ function openBorcModal(id){
     document.getElementById("borc-name").value = b.name;
     document.getElementById("borc-amount").value = b.amount||0;
     document.getElementById("borc-paid-input").value = b.paid||0;
-    document.getElementById("borc-due").value = b.due||"";
     document.getElementById("borc-status-input").value = b.status||"Ödenmedi";
     document.getElementById("borc-note").value = b.note||"";
   } else {
     document.getElementById("borc-modal-title").textContent = "Borçlu ekle";
     ["borc-name","borc-note"].forEach(i=>document.getElementById(i).value="");
     ["borc-amount","borc-paid-input"].forEach(i=>document.getElementById(i).value="0");
-    document.getElementById("borc-due").value="";
     document.getElementById("borc-status-input").value="Ödenmedi";
   }
   document.getElementById("borc-kalan-info").style.display="none";
@@ -2148,7 +2073,7 @@ async function saveBorc(){
   const name = document.getElementById("borc-name").value.trim();
   const amount = parseFloat(document.getElementById("borc-amount").value)||0;
   const paid = parseFloat(document.getElementById("borc-paid-input").value)||0;
-  const due = document.getElementById("borc-due").value;
+  const due = "";
   const status = document.getElementById("borc-status-input").value;
   const note = document.getElementById("borc-note").value.trim();
   if(!name||!amount){alert("İsim ve borç tutarı zorunludur.");return;}
