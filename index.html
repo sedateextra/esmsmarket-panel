@@ -2619,22 +2619,25 @@ const COUNTRY_NAMES = {
 async function fetchHeroBalance(){
   try {
     document.getElementById("sms-balance").textContent = "...";
-    const res = await fetch(`${HERO_BASE}?action=getBalance&api_key=${HERO_API_KEY}`);
+    const res = await fetch(`${HERO_BASE}?action=getBalance`);
     const text = await res.text();
-    if(text.startsWith("ACCESS_BALANCE:")){
+    // Sadece ACCESS_BALANCE: formatını kabul et
+    if(text && text.startsWith("ACCESS_BALANCE:")){
       const balance = parseFloat(text.split(":")[1]);
       document.getElementById("sms-balance").textContent = "$"+balance.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
-      // Düşük bakiye uyarısı
       if(balance < LOW_BALANCE_THRESHOLD){
-        sendTelegram(`⚠️ <b>Hero SMS Düşük Bakiye Uyarısı!</b>
-💰 Mevcut bakiye: $${balance}
-❗ $${LOW_BALANCE_THRESHOLD} limitinin altına düştü!`);
+        sendTelegram("⚠️ Hero SMS Düşük Bakiye! Bakiye: $"+balance+" (Limit: $"+LOW_BALANCE_THRESHOLD+")");
       }
+    } else if(text && text.includes("ACCESS_BALANCE")){
+      const match = text.match(/ACCESS_BALANCE:([0-9.]+)/);
+      if(match) document.getElementById("sms-balance").textContent = "$"+parseFloat(match[1]).toFixed(2);
+      else document.getElementById("sms-balance").textContent = "—";
     } else {
-      document.getElementById("sms-balance").textContent = text;
+      document.getElementById("sms-balance").textContent = "—";
     }
   } catch(e){
-    document.getElementById("sms-balance").textContent = "Hata";
+    document.getElementById("sms-balance").textContent = "—";
+    console.error("Balance error:", e);
   }
 }
 
