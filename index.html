@@ -53,7 +53,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .user-avatar{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .badge-live{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
 .session-timer{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:4px}
-.nav{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
+.nav{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
 .nav button{font-size:11px;padding:8px 4px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;font-weight:500;flex-direction:column;width:100%}
 .nav button:hover{color:var(--text);background:rgba(139,92,246,.1)}
 .nav button.active{background:var(--grad);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.35)}
@@ -342,6 +342,10 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     <button onclick="showPage('borclu',this)">
       <i class="ti ti-alert-triangle" style="font-size:16px"></i>
       <span>Borçlular</span>
+    </button>
+    <button onclick="showPage('shopier',this)">
+      <i class="ti ti-brand-shopee" style="font-size:16px"></i>
+      <span>Shopier</span>
     </button>
     <button onclick="showPage('log',this)">
       <i class="ti ti-list-details" style="font-size:16px"></i>
@@ -812,6 +816,51 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
+  <!-- SHOPİER -->
+  <div id="page-shopier" class="page">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
+      <div class="metric metric-accent">
+        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier toplam gelir</div>
+        <div class="val" id="sh-total-income" style="color:var(--success)">₺0</div>
+        <div class="sub" id="sh-tx-count">0 işlem</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-coin" style="color:var(--danger)"></i>Toplam komisyon</div>
+        <div class="val" id="sh-total-komisyon" style="color:var(--danger)">₺0</div>
+        <div class="sub">Shopier kesintisi</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-trending-up" style="color:var(--success)"></i>Net kazanç</div>
+        <div class="val" id="sh-net-kazanc" style="color:var(--success)">₺0</div>
+        <div class="sub">Elimize geçen</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-users"></i>Shopier üye</div>
+        <div class="val" id="sh-member-count">0</div>
+        <div class="sub">Otomatik yükleme yapan</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier işlemleri</div>
+        <div style="display:flex;gap:6px">
+          <select id="sh-filter" onchange="renderShopier()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+            <option value="all">Tüm işlemler</option>
+            <option value="shopier">Sadece Shopier</option>
+            <option value="manuel">Sadece Manuel</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <colgroup><col style="width:16%"><col style="width:12%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:12%"><col style="width:20%"></colgroup>
+        <thead><tr><th>Üye</th><th>Tutar</th><th>Bonus</th><th>Komisyon</th><th>Net</th><th>Kaynak</th><th>Tarih</th><th>Not</th></tr></thead>
+        <tbody id="sh-body"></tbody>
+      </table>
+      <div id="no-sh" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">İşlem yok.</div>
+    </div>
+  </div>
+
   <!-- LOG -->
   <div id="page-log" class="page">
     <div class="srow" style="margin-bottom:1rem">
@@ -1099,6 +1148,7 @@ function initDash(){
   renderLog();
   renderBorcular();
   renderDashboard();
+  renderShopier();
 }
 
 function showPage(id,btn){
@@ -1110,6 +1160,7 @@ function showPage(id,btn){
   if(id==="top10") renderTop10();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
+  if(id==="shopier") renderShopier();
 }
 
 // ============================================================
@@ -1154,7 +1205,7 @@ function renderCustomers(){
   const slice=filtered.slice(custPage*PAGE_SIZE,(custPage+1)*PAGE_SIZE);
   document.getElementById("cust-body").innerHTML=slice.map(c=>`<tr>
     <td style="color:var(--text3);font-size:11px">${c.id}</td>
-    <td onclick="openCustDetail('${c.id}')" style="cursor:pointer;font-weight:600">${c.name}</td>
+    <td onclick="openCustDetail('${c.id}')" style="cursor:pointer;font-weight:600">${c.name}${transactions.some(t=>t.cust_id===c.id&&t.user_name==="shopier-bot")?' <span style="font-size:9px;padding:1px 5px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)">Shopier</span>':''}</td>
     <td style="color:var(--text2);font-size:11px" title="${c.email}">${c.email}</td>
     <td style="font-weight:700;color:${(c.balance||0)>0?"var(--success)":"var(--text3)"}">${fmt(c.balance)}</td>
     <td style="color:var(--text3);font-size:11px">${c.since||"—"}</td>
@@ -1371,17 +1422,29 @@ async function cancelTransaction(txId){
 }
 
 function renderNewTxTable(){
-  document.getElementById("no-tx").style.display=transactions.length?"none":"block";
-  document.getElementById("new-tx-body").innerHTML=transactions.map(t=>`<tr class="${t.cancelled?"cancelled-row":""}">
-    <td>${t.cust_name}</td><td style="font-weight:700">${fmt(t.amount)}</td>
-    <td style="color:var(--success)">${t.bonus>0?fmt(t.bonus):"—"}</td>
-    <td style="font-weight:700">${fmt(t.total)}</td>
-    <td><span class="tbadge">${t.type}</span></td>
-    <td style="color:var(--text3)">${t.user_name}</td>
-    <td style="color:var(--text3)">${t.date}</td>
-    <td style="color:var(--text3)">${t.note||"—"}</td>
-    <td>${!t.cancelled?`<button class="btn-warning-sm" onclick="cancelTransaction(${t.id})"><i class="ti ti-arrow-back-up"></i></button>`:`<span class="rbadge r-cancel">iptal</span>`}</td>
-  </tr>`).join("");
+  const filterVal = document.getElementById("tx-source-filter")?.value||"all";
+  const filtered = transactions.filter(t=>{
+    if(filterVal==="shopier") return t.user_name==="shopier-bot";
+    if(filterVal==="manuel") return t.user_name!=="shopier-bot";
+    return true;
+  });
+  document.getElementById("no-tx").style.display=filtered.length?"none":"block";
+  document.getElementById("new-tx-body").innerHTML=filtered.map(t=>{
+    const isShopier = t.user_name==="shopier-bot";
+    const sourceBadge = isShopier
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3);font-weight:600">🤖 Shopier</span>`
+      : `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3);font-weight:600">👤 Manuel</span>`;
+    return `<tr class="${t.cancelled?"cancelled-row":""}">
+      <td>${t.cust_name}</td><td style="font-weight:700">${fmt(t.amount)}</td>
+      <td style="color:var(--success)">${t.bonus>0?fmt(t.bonus):"—"}</td>
+      <td style="font-weight:700">${fmt(t.total)}</td>
+      <td><span class="tbadge">${t.type}</span></td>
+      <td>${sourceBadge}</td>
+      <td style="color:var(--text3)">${t.date}</td>
+      <td style="color:var(--text3)">${t.note||"—"}</td>
+      <td>${!t.cancelled?`<button class="btn-warning-sm" onclick="cancelTransaction(${t.id})"><i class="ti ti-arrow-back-up"></i></button>`:`<span class="rbadge r-cancel">iptal</span>`}</td>
+    </tr>`;
+  }).join("");
 }
 function clearTxForm(){["new-cust-select","new-amount","new-note"].forEach(i=>document.getElementById(i).value="");document.getElementById("new-type").value="Havale";document.getElementById("bonus-info").classList.add("hidden");}
 
@@ -1522,6 +1585,10 @@ function updateKasaMetrics(){
   document.getElementById("k-expense").textContent=fmt(totalExpense);
   document.getElementById("k-net").textContent=fmt(net);
   document.getElementById("k-net").style.color=net>=0?"var(--success)":"var(--danger)";
+  // Shopier komisyon ayrı göster
+  const shopierKomTotal = expenses.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
+  const bonusSub = document.getElementById("k-bonus-sub");
+  if(bonusSub) bonusSub.textContent = `${active.filter(t=>t.bonus>0).length} işlemde bonus · Shopier komisyon: ${fmt(shopierKomTotal)}`;
   renderExpenseDist(totalExpense);
   document.getElementById("no-kasa").style.display=expenses.length?"none":"block";
   document.getElementById("kasa-body").innerHTML=expenses.map(e=>`<tr><td><span class="sbadge s-blocked">Gider</span></td><td><span class="rbadge r-delete">${e.type}</span></td><td style="color:var(--danger);font-weight:700">-${fmt(e.amount)}</td><td style="color:var(--text3)">${e.user_name}</td><td style="color:var(--text3)">${e.date}</td><td style="color:var(--text3)">${e.note||"—"}</td></tr>`).join("");
@@ -2223,6 +2290,65 @@ function applyTheme(){
     const icon = document.getElementById("theme-icon");
     if(icon) icon.className="ti ti-moon";
   }
+}
+
+// ============================================================
+// SHOPİER SAYFASI
+// ============================================================
+function renderShopier(){
+  const filterVal = document.getElementById("sh-filter")?.value||"all";
+  const shopierTx = transactions.filter(t=>{
+    if(t.cancelled) return false;
+    if(filterVal==="shopier") return t.user_name==="shopier-bot";
+    if(filterVal==="manuel") return t.user_name!=="shopier-bot";
+    return true;
+  });
+
+  // Shopier komisyon giderleri
+  const shopierKomisyon = expenses.filter(e=>e.type==="Shopier Komisyon");
+  const totalKomisyon = shopierKomisyon.reduce((s,e)=>s+e.amount,0);
+
+  // Sadece Shopier işlemleri için metrikler
+  const shopierOnlyTx = transactions.filter(t=>!t.cancelled&&t.user_name==="shopier-bot");
+  const totalShopierIncome = shopierOnlyTx.reduce((s,t)=>s+t.amount,0);
+  const netKazanc = totalShopierIncome - totalKomisyon;
+  const shopierMembers = new Set(shopierOnlyTx.map(t=>t.cust_id)).size;
+
+  document.getElementById("sh-total-income").textContent = fmt(totalShopierIncome);
+  document.getElementById("sh-tx-count").textContent = shopierOnlyTx.length+" işlem";
+  document.getElementById("sh-total-komisyon").textContent = fmt(totalKomisyon);
+  document.getElementById("sh-net-kazanc").textContent = fmt(netKazanc);
+  document.getElementById("sh-member-count").textContent = shopierMembers;
+
+  const tbody = document.getElementById("sh-body");
+  document.getElementById("no-sh").style.display = shopierTx.length?"none":"block";
+
+  // Komisyon haritası
+  const komisyonMap = {};
+  shopierKomisyon.forEach(e=>{
+    const note = e.note||"";
+    const match = note.match(/(\d+)/);
+    if(match) komisyonMap[match[1]] = e.amount;
+  });
+
+  tbody.innerHTML = shopierTx.map(t=>{
+    const isShopier = t.user_name==="shopier-bot";
+    const komisyon = isShopier ? Math.round((t.amount * 0.0747)*100)/100 : 0;
+    const net = isShopier ? t.amount - komisyon : t.amount;
+    const sourceBadge = isShopier
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3);font-weight:600">🤖 Shopier</span>`
+      : `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3);font-weight:600">👤 Manuel</span>`;
+    return `<tr>
+      <td style="font-weight:600">${t.cust_name}</td>
+      <td style="font-weight:700;color:var(--success)">${fmt(t.amount)}</td>
+      <td style="color:var(--warning)">${t.bonus>0?fmt(t.bonus):"—"}</td>
+      <td style="color:var(--danger)">${isShopier?fmt(komisyon):"—"}</td>
+      <td style="color:var(--success);font-weight:700">${isShopier?fmt(net):fmt(t.amount)}</td>
+      <td>${sourceBadge}</td>
+      <td style="color:var(--text3);font-size:11px">${t.date}</td>
+      <td style="color:var(--text3);font-size:11px">${t.note||"—"}</td>
+    </tr>`;
+  }).join("");
 }
 
 function renderLog(){
