@@ -401,6 +401,25 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
     </div>
 
+    <!-- Hero SMS günlük stats -->
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-check-circle" style="color:var(--success)"></i>Bugün başarılı aktivasyon</div>
+        <div class="val" id="db-hero-success" style="color:var(--success)">—</div>
+        <div class="sub">Hero SMS</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-circle-x" style="color:var(--danger)"></i>Bugün iptal/iade</div>
+        <div class="val" id="db-hero-cancel" style="color:var(--danger)">—</div>
+        <div class="sub">Hero SMS</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-wallet" style="color:var(--warning)"></i>Bugün harcanan</div>
+        <div class="val" id="db-hero-spent" style="color:var(--warning)">—</div>
+        <div class="sub">Hero SMS</div>
+      </div>
+    </div>
+
     <!-- ORTA: Grafikler + Canlı akış -->
     <div style="display:grid;grid-template-columns:1fr 1fr 300px;gap:12px;margin-bottom:12px">
 
@@ -843,65 +862,139 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 
   <!-- SMS TAKİP -->
   <div id="page-sms-takip" class="page">
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
+
+    <!-- ÜST METRİKLER -->
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px">
       <div class="metric metric-accent">
-        <div class="lbl"><i class="ti ti-message-2" style="color:var(--purple)"></i>Toplam SMS</div>
-        <div class="val" id="sms-total" style="color:var(--purple)">0</div>
-        <div class="sub" id="sms-today">Bugün: 0</div>
+        <div class="lbl"><i class="ti ti-wallet" style="color:var(--success)"></i>Hero SMS Bakiye</div>
+        <div class="val" id="sms-balance" style="color:var(--success)">—</div>
+        <div class="sub"><button onclick="fetchHeroBalance()" style="font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid rgba(16,185,129,.4);background:transparent;color:var(--success);cursor:pointer">Yenile</button></div>
       </div>
       <div class="metric">
-        <div class="lbl"><i class="ti ti-brand-telegram" style="color:#229ED9"></i>Telegram</div>
-        <div class="val" id="sms-tg">0</div>
+        <div class="lbl"><i class="ti ti-coin" style="color:var(--warning)"></i>Bugün harcanan</div>
+        <div class="val" id="sms-today-spent" style="color:var(--warning)">—</div>
+        <div class="sub" id="sms-today-count">0 aktivasyon</div>
       </div>
       <div class="metric">
-        <div class="lbl"><i class="ti ti-brand-whatsapp" style="color:#25D366"></i>WhatsApp</div>
-        <div class="val" id="sms-wa">0</div>
+        <div class="lbl"><i class="ti ti-check" style="color:var(--success)"></i>Başarılı</div>
+        <div class="val" id="sms-success-count" style="color:var(--success)">0</div>
+        <div class="sub">Tüm zamanlar</div>
       </div>
       <div class="metric">
-        <div class="lbl"><i class="ti ti-apps" style="color:var(--warning)"></i>Diğer servisler</div>
-        <div class="val" id="sms-other">0</div>
+        <div class="lbl"><i class="ti ti-x" style="color:var(--danger)"></i>İptal / İade</div>
+        <div class="val" id="sms-cancel-count" style="color:var(--danger)">0</div>
+        <div class="sub">Tüm zamanlar</div>
+      </div>
+      <div class="metric">
+        <div class="lbl"><i class="ti ti-clock" style="color:var(--purple)"></i>Aktif aktivasyon</div>
+        <div class="val" id="sms-active-count" style="color:var(--purple)">0</div>
+        <div class="sub">Şu an bekliyor</div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;margin-bottom:12px">
-      <!-- Servis dağılımı grafik -->
+    <!-- AKTİF AKTİVASYONLAR + GEÇMİŞ SEKMELERİ -->
+    <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px">
+      <button id="smstab-active" onclick="setSmsTab('active',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;font-weight:600;background:var(--grad);color:#fff">⚡ Aktif aktivasyonlar</button>
+      <button id="smstab-history" onclick="setSmsTab('history',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📋 Geçmiş işlemler</button>
+      <button id="smstab-country" onclick="setSmsTab('country',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">🌍 Ülke istatistikleri</button>
+      <button id="smstab-logs" onclick="setSmsTab('logs',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📱 SMS log</button>
+    </div>
+
+    <!-- AKTİF AKTİVASYONLAR -->
+    <div id="smstab-active-content">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <button onclick="loadActiveActivations()" class="btn-sm" style="font-size:11px"><i class="ti ti-refresh" style="margin-right:4px"></i>Yenile</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-clock" style="color:var(--purple)"></i>Şu an aktif aktivasyonlar</div><span id="active-badge" class="tbadge">0</span></div>
+        <table>
+          <colgroup><col style="width:10%"><col style="width:15%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:15%"><col style="width:24%"></colgroup>
+          <thead><tr><th>ID</th><th>Servis</th><th>Numara</th><th>Ülke</th><th>Fiyat</th><th>Durum</th><th>Oluşturulma</th></tr></thead>
+          <tbody id="active-body"></tbody>
+        </table>
+        <div id="no-active" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Aktif aktivasyon yok.</div>
+      </div>
+    </div>
+
+    <!-- GEÇMİŞ İŞLEMLER -->
+    <div id="smstab-history-content" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <div style="display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:3px">
+          <button id="hist-all" onclick="setHistFilter('all',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:var(--grad);color:#fff">Tümü</button>
+          <button id="hist-success" onclick="setHistFilter('success',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text2)">✅ Başarılı</button>
+          <button id="hist-cancel" onclick="setHistFilter('cancel',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text2)">❌ İptal/İade</button>
+          <button id="hist-pending" onclick="setHistFilter('pending',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text2)">⏳ Bekliyor</button>
+        </div>
+        <button onclick="loadHistory()" class="btn-sm" style="font-size:11px;margin-left:auto"><i class="ti ti-refresh" style="margin-right:4px"></i>Yenile</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-history"></i>Geçmiş işlemler</div><span id="history-badge" class="tbadge">0</span></div>
+        <table>
+          <colgroup><col style="width:10%"><col style="width:14%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:18%"></colgroup>
+          <thead><tr><th>ID</th><th>Servis</th><th>Numara</th><th>Ülke</th><th>Fiyat</th><th>Durum</th><th>SMS Kodu</th><th>Tarih</th></tr></thead>
+          <tbody id="history-body"></tbody>
+        </table>
+        <div id="no-history" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Geçmiş işlem yok.</div>
+      </div>
+    </div>
+
+    <!-- ÜLKE İSTATİSTİKLERİ -->
+    <div id="smstab-country-content" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <button onclick="loadHistory()" class="btn-sm" style="font-size:11px"><i class="ti ti-refresh" style="margin-right:4px"></i>Yenile</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-world"></i>Ülke bazlı istatistikler</div></div>
+        <table>
+          <colgroup><col style="width:25%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:15%"></colgroup>
+          <thead><tr><th>Ülke</th><th>Toplam</th><th>✅ Başarılı</th><th>❌ İptal/İade</th><th>⏳ Bekliyor</th><th>Başarı oranı</th></tr></thead>
+          <tbody id="country-body"></tbody>
+        </table>
+        <div id="no-country" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Veri yok.</div>
+      </div>
+    </div>
+
+    <!-- SMS LOG -->
+    <div id="smstab-logs-content" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-left"><i class="ti ti-list"></i>Webhook SMS log</div>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="sms-search" placeholder="Servis veya kod ara..." oninput="renderSmsLogs()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);width:160px">
+            <select id="sms-service-filter" onchange="renderSmsLogs()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+              <option value="">Tüm servisler</option>
+              <option value="tg">Telegram</option>
+              <option value="wa">WhatsApp</option>
+              <option value="ig">Instagram</option>
+              <option value="fb">Facebook</option>
+              <option value="tw">Twitter/X</option>
+              <option value="gg">Google</option>
+              <option value="ti">Tinder</option>
+              <option value="vk">VK</option>
+              <option value="ds">Discord</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <colgroup><col style="width:14%"><col style="width:8%"><col style="width:10%"><col style="width:28%"><col style="width:16%"><col style="width:24%"></colgroup>
+          <thead><tr><th>Servis</th><th>Ülke</th><th>Kod</th><th>Mesaj</th><th>Aktivasyon ID</th><th>Tarih / Saat</th></tr></thead>
+          <tbody id="sms-body"></tbody>
+        </table>
+        <div id="no-sms" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz SMS kaydı yok.</div>
+      </div>
+    </div>
+
+    <!-- SERVİS DAĞILIMI -->
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;margin-top:12px">
       <div class="card" style="margin-bottom:0">
         <div class="card-title"><div class="card-title-left"><i class="ti ti-chart-bar"></i>Servis bazlı SMS dağılımı</div></div>
         <div id="sms-dist" style="display:flex;flex-direction:column;gap:8px"></div>
         <div id="no-sms-dist" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz SMS kaydı yok.</div>
       </div>
-      <!-- Son 7 gün -->
       <div class="card" style="margin-bottom:0">
         <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar-stats"></i>Son 7 gün</div></div>
         <div id="sms-7days" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        <div class="card-title-left"><i class="ti ti-list"></i>SMS log</div>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="sms-search" placeholder="Servis veya kod ara..." oninput="renderSmsLogs()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);width:180px">
-          <select id="sms-service-filter" onchange="renderSmsLogs()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
-            <option value="">Tüm servisler</option>
-            <option value="tg">Telegram</option>
-            <option value="wa">WhatsApp</option>
-            <option value="ig">Instagram</option>
-            <option value="fb">Facebook</option>
-            <option value="tw">Twitter/X</option>
-            <option value="gg">Google</option>
-            <option value="ti">Tinder</option>
-            <option value="vk">VK</option>
-            <option value="ds">Discord</option>
-          </select>
-        </div>
-      </div>
-      <table>
-        <colgroup><col style="width:14%"><col style="width:8%"><col style="width:10%"><col style="width:30%"><col style="width:16%"><col style="width:22%"></colgroup>
-        <thead><tr><th>Servis</th><th>Ülke</th><th>Kod</th><th>Mesaj</th><th>Aktivasyon ID</th><th>Tarih / Saat</th></tr></thead>
-        <tbody id="sms-body"></tbody>
-      </table>
-      <div id="no-sms" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz SMS kaydı yok.</div>
     </div>
   </div>
 
@@ -1194,6 +1287,8 @@ function initDash(){
   renderBorcular();
   renderDashboard();
   renderSmsLogs();
+  fetchHeroBalance();
+  loadActiveActivations();
 }
 
 function showPage(id,btn){
@@ -1205,7 +1300,7 @@ function showPage(id,btn){
   if(id==="top10") renderTop10();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
-  if(id==="sms-takip") renderSmsLogs();
+  if(id==="sms-takip"){fetchHeroBalance();loadActiveActivations();renderSmsLogs();}
 }
 
 // ============================================================
@@ -2230,7 +2325,7 @@ function exportBorcExcel(){
 // ============================================================
 let dbLineChart=null, dbPieChart=null, dbHourChart=null;
 
-function renderDashboard(){
+async function renderDashboard(){
   const today = new Date();
   const todayStr2 = today.toLocaleDateString("tr-TR",{day:"numeric",month:"short",year:"numeric"});
   const monthStart = new Date(today.getFullYear(),today.getMonth(),1);
@@ -2317,6 +2412,25 @@ function renderDashboard(){
         <div style="font-size:10px;color:var(--text3)">${t.date||""}</div>
       </div>
     </div>`).join("") : '<div style="font-size:12px;color:var(--text3);padding:.5rem 0;text-align:center">İşlem yok.</div>';
+
+  // Hero SMS günlük stats
+  try {
+    const hRes = await fetch(`https://hero-sms.com/stubs/handler_api?action=getHistory&api_key=${HERO_API_KEY}`);
+    const hData = await hRes.json();
+    const hHistory = Array.isArray(hData) ? hData : (hData.history||[]);
+    const todayStr3 = today.toDateString();
+    const todayH = hHistory.filter(h=>h.createdAt&&new Date(h.createdAt).toDateString()===todayStr3);
+    const todaySuccess = todayH.filter(h=>String(h.status)==="6"||String(h.status)==="3").length;
+    const todayCancel = todayH.filter(h=>String(h.status)==="8"||String(h.status)==="9").length;
+    const todaySpentH = todayH.reduce((s,h)=>s+(parseFloat(h.price)||0),0);
+    document.getElementById("db-hero-success").textContent = todaySuccess;
+    document.getElementById("db-hero-cancel").textContent = todayCancel;
+    document.getElementById("db-hero-spent").textContent = "$"+todaySpentH.toFixed(2);
+  } catch(e){ 
+    document.getElementById("db-hero-success").textContent = "—";
+    document.getElementById("db-hero-cancel").textContent = "—";
+    document.getElementById("db-hero-spent").textContent = "—";
+  }
 
   // Son 30 gün çizgi grafiği
   const days30=[];
@@ -2487,6 +2601,183 @@ function renderShopier(){
 // SMS TAKİP
 // ============================================================
 let smsLogs = [];
+
+const HERO_API_KEY = "3cc425638330fb283f5efdfb2A0c85c6";
+const HERO_BASE = "https://hero-sms.com/stubs/handler_api";
+const LOW_BALANCE_THRESHOLD = 50;
+let heroHistory = [];
+let histFilter = "all";
+let currentSmsTab = "active";
+
+// Ülke ID -> isim eşleştirmesi
+const COUNTRY_NAMES = {
+  0:"Rusya",1:"Ukrayna",2:"Kazakistan",3:"Çin",4:"Filipinler",5:"Myanmar",
+  6:"İndonezya",7:"Malezya",8:"Kenya",9:"Tanzanya",10:"Vietnam",11:"Etiyopya",
+  12:"Gana",13:"Mozambik",14:"Moldova",22:"Türkiye",
+};
+
+async function fetchHeroBalance(){
+  try {
+    document.getElementById("sms-balance").textContent = "...";
+    const res = await fetch(`${HERO_BASE}?action=getBalance&api_key=${HERO_API_KEY}`);
+    const text = await res.text();
+    if(text.startsWith("ACCESS_BALANCE:")){
+      const balance = parseFloat(text.split(":")[1]);
+      document.getElementById("sms-balance").textContent = "$"+balance.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
+      // Düşük bakiye uyarısı
+      if(balance < LOW_BALANCE_THRESHOLD){
+        sendTelegram(`⚠️ <b>Hero SMS Düşük Bakiye Uyarısı!</b>
+💰 Mevcut bakiye: $${balance}
+❗ $${LOW_BALANCE_THRESHOLD} limitinin altına düştü!`);
+      }
+    } else {
+      document.getElementById("sms-balance").textContent = text;
+    }
+  } catch(e){
+    document.getElementById("sms-balance").textContent = "Hata";
+  }
+}
+
+async function loadActiveActivations(){
+  try {
+    const res = await fetch(`${HERO_BASE}?action=getActiveActivations&api_key=${HERO_API_KEY}`);
+    const data = await res.json();
+    const activations = data.activeActivations || {};
+    const list = Object.values(activations).flatMap(s=>Object.values(s));
+    document.getElementById("active-badge").textContent = list.length;
+    document.getElementById("sms-active-count").textContent = list.length;
+    document.getElementById("no-active").style.display = list.length?"none":"block";
+    document.getElementById("active-body").innerHTML = list.map(a=>{
+      const svcName = a.serviceName||a.service||"—";
+      const color = SERVICE_COLORS[a.service]||"#8b5cf6";
+      const icon = SERVICE_ICONS[a.service]||"ti-message-2";
+      const countryName = COUNTRY_NAMES[a.countryCode]||("Ülke "+a.countryCode);
+      const dt = a.createdAt ? new Date(a.createdAt).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+new Date(a.createdAt).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}) : "—";
+      return `<tr>
+        <td style="font-size:11px;color:var(--text3)">${a.id||"—"}</td>
+        <td><div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:5px;background:${color}20;display:flex;align-items:center;justify-content:center"><i class="ti ${icon}" style="color:${color};font-size:11px"></i></div><span style="font-size:12px;font-weight:600">${svcName}</span></div></td>
+        <td style="font-size:11px">${a.phoneNumber||"—"}</td>
+        <td style="font-size:11px;color:var(--text2)">${countryName}</td>
+        <td style="font-size:11px;color:var(--warning)">$${a.price||"—"}</td>
+        <td><span class="sbadge" style="background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3)">Aktif</span></td>
+        <td style="font-size:11px;color:var(--text3)">${dt}</td>
+      </tr>`;
+    }).join("");
+  } catch(e){ console.error("Active activations error:", e); }
+}
+
+async function loadHistory(){
+  try {
+    const res = await fetch(`${HERO_BASE}?action=getHistory&api_key=${HERO_API_KEY}`);
+    const data = await res.json();
+    heroHistory = Array.isArray(data) ? data : (data.history||[]);
+    
+    // Metrikleri güncelle
+    const today2 = new Date().toDateString();
+    const successList = heroHistory.filter(h=>h.status==="6"||h.status===6||h.smsCode);
+    const cancelList = heroHistory.filter(h=>h.status==="8"||h.status==="9"||h.status===8||h.status===9);
+    const pendingList = heroHistory.filter(h=>h.status==="1"||h.status==="2"||h.status==="3"||h.status==="4"||h.status===1||h.status===2||h.status===3||h.status===4);
+    const todayList = heroHistory.filter(h=>h.createdAt&&new Date(h.createdAt).toDateString()===today2);
+    const todaySpent = todayList.reduce((s,h)=>s+(parseFloat(h.price)||0),0);
+    
+    document.getElementById("sms-success-count").textContent = successList.length;
+    document.getElementById("sms-cancel-count").textContent = cancelList.length;
+    document.getElementById("sms-today-spent").textContent = "$"+todaySpent.toFixed(2);
+    document.getElementById("sms-today-count").textContent = todayList.length+" aktivasyon";
+    
+    renderHistory();
+    renderCountryStats();
+  } catch(e){ console.error("History error:", e); }
+}
+
+function getStatusLabel(status){
+  const s = String(status);
+  if(s==="6") return {text:"Başarılı",cls:"s-active"};
+  if(s==="8"||s==="9") return {text:"İptal/İade",cls:"s-blocked"};
+  if(s==="1") return {text:"Bekliyor",cls:"tbadge"};
+  if(s==="2") return {text:"SMS Bekleniyor",cls:"tbadge"};
+  if(s==="3") return {text:"Tamamlandı",cls:"s-active"};
+  if(s==="4") return {text:"Kodu Tekrar Gönder",cls:"tbadge"};
+  return {text:"Durum "+s,cls:"tbadge"};
+}
+
+function renderHistory(){
+  let filtered = heroHistory;
+  if(histFilter==="success") filtered = heroHistory.filter(h=>String(h.status)==="6"||String(h.status)==="3"||h.smsCode);
+  else if(histFilter==="cancel") filtered = heroHistory.filter(h=>String(h.status)==="8"||String(h.status)==="9");
+  else if(histFilter==="pending") filtered = heroHistory.filter(h=>["1","2","4"].includes(String(h.status)));
+  
+  document.getElementById("history-badge").textContent = filtered.length;
+  document.getElementById("no-history").style.display = filtered.length?"none":"block";
+  document.getElementById("history-body").innerHTML = filtered.map(h=>{
+    const svcName = h.serviceName||h.service||"—";
+    const color = SERVICE_COLORS[h.service]||"#8b5cf6";
+    const icon = SERVICE_ICONS[h.service]||"ti-message-2";
+    const countryName = COUNTRY_NAMES[h.countryCode]||("Ülke "+h.countryCode);
+    const sl = getStatusLabel(h.status);
+    const dt = h.createdAt ? new Date(h.createdAt).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+new Date(h.createdAt).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}) : "—";
+    return `<tr>
+      <td style="font-size:11px;color:var(--text3)">${h.id||"—"}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:5px;background:${color}20;display:flex;align-items:center;justify-content:center"><i class="ti ${icon}" style="color:${color};font-size:11px"></i></div><span style="font-size:12px;font-weight:600">${svcName}</span></div></td>
+      <td style="font-size:11px">${h.phoneNumber||"—"}</td>
+      <td style="font-size:11px;color:var(--text2)">${countryName}</td>
+      <td style="font-size:11px;color:var(--warning)">$${h.price||"—"}</td>
+      <td><span class="sbadge ${sl.cls}" style="font-size:10px">${sl.text}</span></td>
+      <td style="font-weight:700;color:var(--success)">${h.smsCode||"—"}</td>
+      <td style="font-size:11px;color:var(--text3)">${dt}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderCountryStats(){
+  const countryMap = {};
+  heroHistory.forEach(h=>{
+    const k = h.countryCode??0;
+    const name = COUNTRY_NAMES[k]||("Ülke "+k);
+    if(!countryMap[k]) countryMap[k]={name,total:0,success:0,cancel:0,pending:0};
+    countryMap[k].total++;
+    const s = String(h.status);
+    if(s==="6"||s==="3") countryMap[k].success++;
+    else if(s==="8"||s==="9") countryMap[k].cancel++;
+    else countryMap[k].pending++;
+  });
+  const list = Object.values(countryMap).sort((a,b)=>b.total-a.total);
+  document.getElementById("no-country").style.display = list.length?"none":"block";
+  document.getElementById("country-body").innerHTML = list.map(c=>{
+    const rate = Math.round((c.success/c.total)*100);
+    return `<tr>
+      <td style="font-weight:600">${c.name}</td>
+      <td style="font-weight:700">${c.total}</td>
+      <td style="color:var(--success);font-weight:600">${c.success}</td>
+      <td style="color:var(--danger)">${c.cancel}</td>
+      <td style="color:var(--purple)">${c.pending}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${rate}%;background:var(--success);border-radius:4px"></div></div><span style="font-size:11px;font-weight:700;color:var(--success);min-width:32px">${rate}%</span></div></td>
+    </tr>`;
+  }).join("");
+}
+
+function setSmsTab(tab, btn){
+  currentSmsTab = tab;
+  ["active","history","country","logs"].forEach(t=>{
+    const el = document.getElementById("smstab-"+t+"-content");
+    if(el) el.style.display = t===tab?"block":"none";
+    const b = document.getElementById("smstab-"+t);
+    if(b){b.style.background="transparent";b.style.color="var(--text2)";}
+  });
+  btn.style.background="var(--grad)";btn.style.color="#fff";
+  if(tab==="active") loadActiveActivations();
+  if(tab==="history"||tab==="country") loadHistory();
+  if(tab==="logs") renderSmsLogs();
+}
+
+function setHistFilter(filter, btn){
+  histFilter = filter;
+  document.querySelectorAll("#smstab-history-content button").forEach(b=>{
+    b.style.background="transparent";b.style.color="var(--text2)";
+  });
+  btn.style.background="var(--grad)";btn.style.color="#fff";
+  renderHistory();
+}
 
 async function loadSmsLogs(){
   try {
