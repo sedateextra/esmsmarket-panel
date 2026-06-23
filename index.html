@@ -466,7 +466,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <div class="metric metric-accent"><div class="lbl"><i class="ti ti-users"></i>Toplam üye</div><div class="val" id="m-count">0</div><div class="sub" id="m-date-sub"></div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-coin"></i>Toplam bakiye</div><div class="val" id="m-balance" style="color:var(--success)">₺0</div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-trending-up"></i>Bakiyeli üye</div><div class="val" id="m-with-balance">0</div><div class="sub">Bakiye > 0</div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-user-plus"></i>En yeni üye</div><div class="val" id="m-newest" style="font-size:13px;margin-top:4px">—</div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-user-plus"></i>En yeni üye</div><div class="val" id="m-newest" style="font-size:13px;margin-top:4px">—</div><div class="sub" id="m-newest-date"></div></div>
     </div>
     <div class="panels">
       <div style="position:relative">
@@ -533,10 +533,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           <div class="card-title"><div class="card-title-left"><i class="ti ti-arrow-up-circle"></i>Son işlemler</div></div>
           <div id="tx-list"><div style="font-size:12px;color:var(--text3);padding:.5rem 0">Henüz işlem yok.</div></div>
         </div>
-        <div class="card">
-          <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar"></i>Günlük kayıt (7 gün)</div></div>
-          <div id="reg-chart-wrap" style="display:flex;flex-direction:column;gap:6px"></div>
-        </div>
+
       </div>
     </div>
   </div>
@@ -1263,19 +1260,16 @@ function updateCustomerMetrics(){
   document.getElementById("m-count").textContent=customers.length;
   document.getElementById("m-balance").textContent=fmt(customers.reduce((s,c)=>s+(c.balance||0),0));
   document.getElementById("m-with-balance").textContent=customers.filter(c=>(c.balance||0)>0).length;
-  document.getElementById("m-newest").textContent=customers.length?customers[0].name:"—";
-  renderRegChart();
+  if(customers.length){
+    document.getElementById("m-newest").textContent=customers[0].name;
+    document.getElementById("m-newest-date").textContent=customers[0].since||"—";
+  } else {
+    document.getElementById("m-newest").textContent="—";
+    document.getElementById("m-newest-date").textContent="";
+  }
 }
 
-function renderRegChart(){
-  const wrap=document.getElementById("reg-chart-wrap");
-  const counts={};
-  const today=new Date();
-  for(let i=6;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const k=d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit"});counts[k]=0;}
-  customers.forEach(c=>{const pts=(c.since||"").split(".");if(pts.length===3){const k=pts[0]+"."+pts[1];if(counts.hasOwnProperty(k))counts[k]++;}});
-  const maxC=Math.max(...Object.values(counts),1);
-  wrap.innerHTML=Object.entries(counts).map(([day,cnt])=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3);min-width:36px">${day}</span><div style="flex:1;height:12px;background:var(--bg2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.round((cnt/maxC)*100)}%;background:linear-gradient(90deg,#8b5cf6,#ec4899);border-radius:3px"></div></div><span style="font-size:11px;font-weight:700;min-width:14px;text-align:right;color:${cnt>0?"var(--text)":"var(--text3)"}">${cnt}</span></div>`).join("");
-}
+
 
 function openCustDetail(id){
   const c=customers.find(x=>x.id===id);if(!c)return;
