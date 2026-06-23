@@ -580,17 +580,6 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <div class="card"><div class="card-title"><div class="card-title-left"><i class="ti ti-trophy" style="color:var(--warning)"></i>En yüksek bakiyeli üyeler</div></div><div id="top10-balance"></div></div>
       <div class="card"><div class="card-title"><div class="card-title-left"><i class="ti ti-trending-up" style="color:var(--success)"></i>En çok yükleme yapanlar</div></div><div id="top10-tx"></div></div>
     </div>
-    <!-- 30 GÜN İŞLEM YAPMAYANLAR -->
-    <div class="card" style="margin-top:12px;margin-bottom:12px">
-      <div class="card-title"><div class="card-title-left"><i class="ti ti-user-off" style="color:var(--warning)"></i>30 gündür işlem yapmayan üyeler</div><span id="inactive-count" class="tbadge" style="background:rgba(245,158,11,.15);color:var(--warning);border-color:rgba(245,158,11,.3)">0 üye</span></div>
-      <table>
-        <colgroup><col style="width:12%"><col style="width:20%"><col style="width:28%"><col style="width:15%"><col style="width:25%"></colgroup>
-        <thead><tr><th>ID</th><th>Kullanıcı</th><th>E-posta</th><th>Bakiye</th><th>Son işlem / Kayıt</th></tr></thead>
-        <tbody id="inactive-body"></tbody>
-      </table>
-      <div id="no-inactive" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">30 gündür işlem yapmayan üye yok.</div>
-    </div>
-
     <div class="card" style="margin-top:12px">
       <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar-stats"></i>Bu hafta kayıt olanlar</div><span id="week-reg-count" class="tbadge">0 üye</span></div>
       <table><colgroup><col style="width:12%"><col style="width:22%"><col style="width:30%"><col style="width:18%"><col style="width:18%"></colgroup>
@@ -1315,6 +1304,18 @@ async function addTransaction(){
   const cust=customers.find(c=>c.id===custId);
   const bonus=calcBonusAmt(amt,type);
   const total=amt+bonus;
+
+  // Onay adımı
+  const bonusText = bonus>0 ? `\n🎁 Bonus: +${fmt(bonus)} (%${Math.round((bonus/amt)*100)})\n💎 Toplam: ${fmt(total)}` : "";
+  const confirmed = confirm(
+    `İşlemi onaylıyor musunuz?\n\n` +
+    `👤 Üye: ${cust.name} (${cust.id})\n` +
+    `💰 Tutar: ${fmt(amt)}` + bonusText + `\n` +
+    `💳 Yöntem: ${type}\n` +
+    `${note ? "📝 Not: "+note : ""}\n\n` +
+    `Onaylamak için Tamam'a basın.`
+  );
+  if(!confirmed) return;
   showLoading(true);
   const tx={cust_id:custId,cust_name:cust.name,amount:amt,bonus,total,type,note,date:todayStr(),user_name:currentUser,cancelled:false};
   const {data}=await db.from("transactions").insert(tx).select();
@@ -1474,24 +1475,6 @@ function renderTop10(){
   });
   const top10tx=Object.values(txTotals).sort((a,b)=>b.total-a.total).slice(0,10);
   document.getElementById("top10-tx").innerHTML=top10tx.length?top10tx.map((c,i)=>`<div class="top10-row"><div class="top10-rank ${rankClass(i)}">${i+1}</div><div style="flex:1"><div style="font-size:12px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.count} işlem</div></div><div style="font-size:13px;font-weight:700;color:var(--purple)">${fmt(c.total)}</div></div>`).join(""):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">Henüz işlem yok.</div>';
-  // 30 gün işlem yapmayanlar
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(now.getDate()-30);
-  const activeCustIds = new Set(transactions.filter(t=>{
-    if(!t.created_at||t.cancelled) return false;
-    return new Date(t.created_at)>=thirtyDaysAgo;
-  }).map(t=>t.cust_id));
-  const inactives = customers.filter(c=>!activeCustIds.has(c.id));
-  document.getElementById("inactive-count").textContent = inactives.length+" üye";
-  document.getElementById("no-inactive").style.display = inactives.length?"none":"block";
-  document.getElementById("inactive-body").innerHTML = inactives.slice(0,20).map(c=>`<tr>
-    <td style="color:var(--text3);font-size:11px">${c.id}</td>
-    <td style="font-weight:600">${c.name}</td>
-    <td style="color:var(--text2);font-size:11px">${c.email}</td>
-    <td style="color:var(--success);font-weight:700">${fmt(c.balance||0)}</td>
-    <td style="color:var(--text3);font-size:11px">${c.since||"—"}</td>
-  </tr>`).join("");
-
   const now2=new Date();const weekAgo=new Date(now2);weekAgo.setDate(now2.getDate()-7);
   const weekRegs=customers.filter(c=>{const d=parseSince(c.since||"");return d&&d>=weekAgo;});
   document.getElementById("week-reg-count").textContent=weekRegs.length+" üye";
