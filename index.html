@@ -2716,12 +2716,36 @@ async function loadHistory(){
         const m = String(rawSms).match(/\d{4,8}/);
         extractedCode = m ? m[0] : null;
       }
+      // Telefon kodundan ülke tahmini
+      const phoneStr = String(h.phone||"");
+      let countryFromPhone = null;
+      if(phoneStr.startsWith("90")) countryFromPhone = 22; // Türkiye
+      else if(phoneStr.startsWith("7")) countryFromPhone = 0; // Rusya
+      else if(phoneStr.startsWith("38")) countryFromPhone = 1; // Ukrayna
+      else if(phoneStr.startsWith("56")) countryFromPhone = 151; // Şili
+      else if(phoneStr.startsWith("55")) countryFromPhone = 104; // Brezilya
+      else if(phoneStr.startsWith("62")) countryFromPhone = 6; // Endonezya
+      else if(phoneStr.startsWith("63")) countryFromPhone = 4; // Filipinler
+      else if(phoneStr.startsWith("84")) countryFromPhone = 10; // Vietnam
+      else if(phoneStr.startsWith("91")) countryFromPhone = 62; // Hindistan
+      else if(phoneStr.startsWith("86")) countryFromPhone = 3; // Çin
+      else if(phoneStr.startsWith("1")) countryFromPhone = 29; // ABD
+      else if(phoneStr.startsWith("44")) countryFromPhone = 31; // İngiltere
+      else if(phoneStr.startsWith("49")) countryFromPhone = 49; // Almanya
+      else if(phoneStr.startsWith("33")) countryFromPhone = 33; // Fransa
+      else if(phoneStr.startsWith("57")) countryFromPhone = 57; // Kolombiya
+      else if(phoneStr.startsWith("52")) countryFromPhone = 77; // Meksika
+      else if(phoneStr.startsWith("998")) countryFromPhone = 135; // Özbekistan
+      else if(photoStr && phoneStr.startsWith("374")) countryFromPhone = 134; // Ermenistan
+      else if(phoneStr.startsWith("994")) countryFromPhone = 132; // Azerbaycan
+      else if(phoneStr.startsWith("995")) countryFromPhone = 133; // Gürcistan
+
       return {
         id,
         service: svcKey,
         serviceName: svcName,
         phoneNumber: String(h.phone||"—"),
-        countryCode: h.country!=null ? parseInt(h.country) : null,
+        countryCode: h.country!=null ? parseInt(h.country) : countryFromPhone,
         price: parseFloat(h.cost||0),
         status: String(h.status||""),
         smsCode: extractedCode,
