@@ -2845,6 +2845,13 @@ async function loadSmsLogs(){
   } catch(e){ console.error("SMS logs error:", e); }
 }
 
+const SERVICE_NAMES = {
+  "tg":"Telegram","vk":"VK","wa":"WhatsApp","ig":"Instagram",
+  "fb":"Facebook","tw":"Twitter/X","gg":"Google","ti":"Tinder",
+  "ub":"Uber","am":"Amazon","nf":"Netflix","yt":"YouTube",
+  "tt":"TikTok","ln":"LinkedIn","ds":"Discord","yi":"Instagram+Threads",
+};
+
 const SERVICE_ICONS = {
   "tg":"ti-brand-telegram","wa":"ti-brand-whatsapp","ig":"ti-brand-instagram",
   "fb":"ti-brand-facebook","tw":"ti-brand-x","gg":"ti-brand-google",
