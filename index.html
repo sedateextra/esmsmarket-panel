@@ -2415,7 +2415,7 @@ async function renderDashboard(){
 
   // Hero SMS günlük stats
   try {
-    const hRes = await fetch(`https://hero-sms.com/stubs/handler_api?action=getHistory&api_key=${HERO_API_KEY}`);
+    const hRes = await fetch(`${HERO_BASE}?action=getHistory`);
     const hData = await hRes.json();
     const hHistory = Array.isArray(hData) ? hData : (hData.history||[]);
     const todayStr3 = today.toDateString();
@@ -2603,7 +2603,7 @@ function renderShopier(){
 let smsLogs = [];
 
 const HERO_API_KEY = "3cc425638330fb283f5efdfb2A0c85c6";
-const HERO_BASE = "https://hero-sms.com/stubs/handler_api";
+const HERO_BASE = "https://ngfvvsrnnyotbwrdvxjl.supabase.co/functions/v1/herosms-webhook";
 const LOW_BALANCE_THRESHOLD = 50;
 let heroHistory = [];
 let histFilter = "all";
