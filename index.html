@@ -596,12 +596,29 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 
   <!-- KASA -->
   <div id="page-kasa" class="page">
+
+    <!-- ÜST METRİKLER -->
     <div class="kasa-metrics">
       <div class="metric"><div class="lbl"><i class="ti ti-arrow-up-circle"></i>Toplam gelir</div><div class="val kval-income" id="k-income">₺0</div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-gift"></i>Bonus maliyeti</div><div class="val kval-bonus" id="k-bonus">₺0</div><div class="sub" id="k-bonus-sub"></div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-arrow-down-circle"></i>Toplam gider</div><div class="val kval-expense" id="k-expense">₺0</div></div>
       <div class="metric metric-accent"><div class="lbl"><i class="ti ti-scale"></i>Net kasa</div><div class="val" id="k-net">₺0</div></div>
     </div>
+
+    <!-- ÖDEME YÖNTEMİ SEKMELERİ -->
+    <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px">
+      <button id="ktab-all" onclick="setKasaTab('all',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;font-weight:600;background:var(--grad);color:#fff">Tümü</button>
+      <button id="ktab-shopier" onclick="setKasaTab('shopier',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">🤖 Shopier</button>
+      <button id="ktab-havale" onclick="setKasaTab('havale',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">🏦 Havale/EFT</button>
+      <button id="ktab-kart" onclick="setKasaTab('kart',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">💳 Kredi kartı</button>
+      <button id="ktab-kripto" onclick="setKasaTab('kripto',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">₿ Kripto</button>
+      <button id="ktab-gider" onclick="setKasaTab('gider',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📉 Giderler</button>
+    </div>
+
+    <!-- SEKME METRİKLERİ -->
+    <div id="kasa-tab-metrics" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px"></div>
+
+    <!-- GRAFİKLER -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
       <div class="card" style="margin-bottom:0">
         <div class="card-title">
@@ -619,12 +636,16 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div id="no-expense-dist" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz gider yok.</div>
       </div>
     </div>
+
+    <!-- ACTION BAR -->
     <div class="action-bar">
       <button onclick="openExpense('İş gideri')"><i class="ti ti-briefcase"></i>İş gideri ekle</button>
       <button onclick="openExpense('Personel gideri')"><i class="ti ti-users"></i>Personel gideri ekle</button>
       <button onclick="exportKasaExcel()" style="margin-left:auto"><i class="ti ti-file-spreadsheet"></i>Kasa raporu indir</button>
       <button onclick="exportMonthlyReport()"><i class="ti ti-file-analytics"></i>Aylık özet raporu</button>
     </div>
+
+    <!-- EXPENSE MODAL -->
     <div class="overlay-wrap" id="expense-overlay">
       <div class="modal">
         <div class="modal-hdr"><h3 id="exp-title">Gider ekle</h3><button onclick="closeExpense()"><i class="ti ti-x"></i></button></div>
@@ -636,13 +657,20 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         </div>
       </div>
     </div>
+
+    <!-- HAREKETLER TABLOSU -->
     <div class="card">
-      <div class="card-title"><div class="card-title-left"><i class="ti ti-list"></i>Kasa hareketleri</div></div>
-      <table><colgroup><col style="width:12%"><col style="width:16%"><col style="width:13%"><col style="width:13%"><col style="width:14%"><col style="width:32%"></colgroup>
-        <thead><tr><th>Tür</th><th>Kategori</th><th>Tutar</th><th>İşlemci</th><th>Tarih</th><th>Not</th></tr></thead>
-        <tbody id="kasa-body"></tbody>
-      </table>
-      <div id="no-kasa" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz gider kaydı yok.</div>
+      <div class="card-title">
+        <div class="card-title-left"><i class="ti ti-list"></i><span id="kasa-table-title">Tüm kasa hareketleri</span></div>
+        <span id="kasa-table-count" class="tbadge">0 kayıt</span>
+      </div>
+      <div id="kasa-table-wrap">
+        <table><colgroup><col style="width:16%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:25%"></colgroup>
+          <thead><tr><th>Üye / Açıklama</th><th>Tür</th><th>Tutar</th><th>Bonus</th><th>Kaynak</th><th>Tarih</th><th>Not</th></tr></thead>
+          <tbody id="kasa-body"></tbody>
+        </table>
+      </div>
+      <div id="no-kasa" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz kayıt yok.</div>
     </div>
   </div>
 
@@ -1573,6 +1601,17 @@ function renderTop10(){
 // ============================================================
 // KASA
 // ============================================================
+let kasaCurrentTab = "all";
+
+function setKasaTab(tab, btn){
+  kasaCurrentTab = tab;
+  document.querySelectorAll("#page-kasa [id^='ktab-']").forEach(b=>{
+    b.style.background="transparent"; b.style.color="var(--text2)";
+  });
+  btn.style.background="var(--grad)"; btn.style.color="#fff";
+  updateKasaMetrics();
+}
+
 function updateKasaMetrics(){
   const active=transactions.filter(t=>!t.cancelled);
   const totalIncome=active.reduce((s,t)=>s+t.amount,0);
@@ -1581,18 +1620,69 @@ function updateKasaMetrics(){
   const net=totalIncome-totalBonus-totalExpense;
   document.getElementById("k-income").textContent=fmt(totalIncome);
   document.getElementById("k-bonus").textContent=fmt(totalBonus);
-  document.getElementById("k-bonus-sub").textContent=active.filter(t=>t.bonus>0).length+" işlemde bonus";
+  const shopierKomTotal=expenses.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
+  const bonusSub=document.getElementById("k-bonus-sub");
+  if(bonusSub) bonusSub.textContent=active.filter(t=>t.bonus>0).length+" işlemde bonus · Shopier komisyon: "+fmt(shopierKomTotal);
   document.getElementById("k-expense").textContent=fmt(totalExpense);
   document.getElementById("k-net").textContent=fmt(net);
   document.getElementById("k-net").style.color=net>=0?"var(--success)":"var(--danger)";
-  // Shopier komisyon ayrı göster
-  const shopierKomTotal = expenses.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
-  const bonusSub = document.getElementById("k-bonus-sub");
-  if(bonusSub) bonusSub.textContent = `${active.filter(t=>t.bonus>0).length} işlemde bonus · Shopier komisyon: ${fmt(shopierKomTotal)}`;
   renderExpenseDist(totalExpense);
-  document.getElementById("no-kasa").style.display=expenses.length?"none":"block";
-  document.getElementById("kasa-body").innerHTML=expenses.map(e=>`<tr><td><span class="sbadge s-blocked">Gider</span></td><td><span class="rbadge r-delete">${e.type}</span></td><td style="color:var(--danger);font-weight:700">-${fmt(e.amount)}</td><td style="color:var(--text3)">${e.user_name}</td><td style="color:var(--text3)">${e.date}</td><td style="color:var(--text3)">${e.note||"—"}</td></tr>`).join("");
+
+  // Sekme bazlı render
+  const tab=kasaCurrentTab;
+  let filteredTx=[], filteredExp=[], tabTitle="Tüm kasa hareketleri";
+
+  if(tab==="all"){ filteredTx=active; filteredExp=expenses; tabTitle="Tüm kasa hareketleri"; }
+  else if(tab==="shopier"){ filteredTx=active.filter(t=>t.user_name==="shopier-bot"); filteredExp=expenses.filter(e=>e.type==="Shopier Komisyon"); tabTitle="🤖 Shopier işlemleri"; }
+  else if(tab==="havale"){ filteredTx=active.filter(t=>t.type==="Havale"); tabTitle="🏦 Havale / EFT işlemleri"; }
+  else if(tab==="kart"){ filteredTx=active.filter(t=>t.type==="Kredi kartı"&&t.user_name!=="shopier-bot"); tabTitle="💳 Kredi kartı (manuel) işlemleri"; }
+  else if(tab==="kripto"){ filteredTx=active.filter(t=>t.type==="Kripto"); tabTitle="₿ Kripto işlemleri"; }
+  else if(tab==="gider"){ filteredExp=expenses; tabTitle="📉 Giderler"; }
+
+  const tabIncome=filteredTx.reduce((s,t)=>s+t.amount,0);
+  const tabBonus=filteredTx.reduce((s,t)=>s+t.bonus,0);
+  const tabExpense=filteredExp.reduce((s,e)=>s+e.amount,0);
+  const tabNet=tabIncome-tabBonus-tabExpense;
+  const tabKomisyon=filteredExp.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
+
+  const metricsEl=document.getElementById("kasa-tab-metrics");
+  if(metricsEl){
+    if(tab==="gider"){
+      metricsEl.innerHTML=
+        "<div class='metric'><div class='lbl'><i class='ti ti-arrow-down-circle' style='color:var(--danger)'></i>Toplam gider</div><div class='val' style='color:var(--danger)'>"+fmt(tabExpense)+"</div><div class='sub'>"+filteredExp.length+" kayıt</div></div>"+
+        "<div class='metric'><div class='lbl'><i class='ti ti-brand-shopee' style='color:var(--warning)'></i>Shopier komisyon</div><div class='val' style='color:var(--warning)'>"+fmt(tabKomisyon)+"</div></div>"+
+        "<div class='metric'><div class='lbl'><i class='ti ti-briefcase'></i>İş gideri</div><div class='val'>"+fmt(expenses.filter(e=>e.type==="İş gideri").reduce((s,e)=>s+e.amount,0))+"</div></div>"+
+        "<div class='metric'><div class='lbl'><i class='ti ti-users'></i>Personel</div><div class='val'>"+fmt(expenses.filter(e=>e.type==="Personel gideri").reduce((s,e)=>s+e.amount,0))+"</div></div>";
+    } else {
+      const uyeCount=new Set(filteredTx.map(t=>t.cust_id)).size;
+      metricsEl.innerHTML=
+        "<div class='metric'><div class='lbl'><i class='ti ti-arrow-up-circle' style='color:var(--success)'></i>Gelir</div><div class='val' style='color:var(--success)'>"+fmt(tabIncome)+"</div><div class='sub'>"+filteredTx.length+" işlem</div></div>"+
+        "<div class='metric'><div class='lbl'><i class='ti ti-gift' style='color:var(--warning)'></i>Bonus</div><div class='val' style='color:var(--warning)'>"+fmt(tabBonus)+"</div><div class='sub'>"+filteredTx.filter(t=>t.bonus>0).length+" işlemde</div></div>"+
+        (tab==="shopier"?"<div class='metric'><div class='lbl'><i class='ti ti-coin' style='color:var(--danger)'></i>Komisyon</div><div class='val' style='color:var(--danger)'>"+fmt(tabKomisyon)+"</div></div>":"<div class='metric'><div class='lbl'><i class='ti ti-users'></i>Üye sayısı</div><div class='val'>"+uyeCount+"</div></div>")+
+        "<div class='metric metric-accent'><div class='lbl'><i class='ti ti-scale'></i>Net</div><div class='val' style='color:"+(tabNet>=0?"var(--success)":"var(--danger)")+"'>"+fmt(tabNet)+"</div></div>";
+    }
+  }
+
+  if(document.getElementById("kasa-table-title")) document.getElementById("kasa-table-title").textContent=tabTitle;
+
+  const srcBadge=t=>t.user_name==="shopier-bot"
+    ?"<span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span>"
+    :"<span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3)'>👤 Manuel</span>";
+
+  let rows=[];
+  if(tab!=="gider"){
+    rows=filteredTx.map(t=>"<tr><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+t.date+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td></tr>");
+  }
+  if(tab==="all"||tab==="gider"||tab==="shopier"){
+    rows=rows.concat(filteredExp.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+e.date+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td></tr>"));
+  }
+
+  const total=rows.length;
+  if(document.getElementById("kasa-table-count")) document.getElementById("kasa-table-count").textContent=total+" kayıt";
+  document.getElementById("no-kasa").style.display=total?"none":"block";
+  document.getElementById("kasa-body").innerHTML=rows.join("");
 }
+
 
 function renderExpenseDist(total){
   const cats={};expenses.forEach(e=>{if(!cats[e.type])cats[e.type]=0;cats[e.type]+=e.amount;});
