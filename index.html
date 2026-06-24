@@ -53,7 +53,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .user-avatar{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .badge-live{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
 .session-timer{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:4px}
-.nav{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
+.nav{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-bottom:1.25rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:5px}
 .nav button{font-size:11px;padding:8px 4px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;font-weight:500;flex-direction:column;width:100%}
 .nav button:hover{color:var(--text);background:rgba(139,92,246,.1)}
 .nav button.active{background:var(--grad);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.35)}
@@ -342,6 +342,10 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     <button onclick="showPage('sms-takip',this)">
       <i class="ti ti-message-2" style="font-size:16px"></i>
       <span>SMS Takip</span>
+    </button>
+    <button onclick="showPage('excel',this)">
+      <i class="ti ti-file-spreadsheet" style="font-size:16px"></i>
+      <span>Excel güncelle</span>
     </button>
     <button onclick="showPage('log',this)">
       <i class="ti ti-list-details" style="font-size:16px"></i>
