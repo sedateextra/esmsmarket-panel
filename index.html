@@ -3028,12 +3028,18 @@ async function loadHistory(){
     const smsMap = {};
     smsLogs.forEach(s=>{ if(s.activation_id) smsMap[String(s.activation_id)] = s; });
 
+    // activeActivationsData ile ID eşleştir (servis bilgisi için)
+    const activeMap2 = {};
+    activeActivationsData.forEach(a=>{ activeMap2[String(a.activationId)] = a; });
+
     // Normalize - alan isimlerini düzelt
     heroHistory = rawHistory.map(h=>{
       const id = String(h.id||"");
       const smsLog = smsMap[id]||{};
-      const svcKey = (h.service||smsLog.service||"").toLowerCase();
-      const svcName = SERVICE_NAMES[svcKey]||smsLog.service_name||svcKey||"—";
+      const activeMatch = activeMap2[id]||{};
+      const svcKey = (h.service||activeMatch.serviceCode||smsLog.service||"").toLowerCase();
+      const svcName = SERVICE_NAMES[svcKey]||activeMatch.serviceName||smsLog.service_name||(svcKey?svcKey.toUpperCase():null)||"—";
+      const countryFromActive = activeMatch.countryName||null;
       const rawSms = h.sms||smsLog.text||null;
       let extractedCode = smsLog.code||null;
       if(!extractedCode && rawSms){
@@ -3070,6 +3076,7 @@ async function loadHistory(){
         serviceName: svcName,
         phoneNumber: String(h.phone||"—"),
         countryCode: h.country!=null ? parseInt(h.country) : countryFromPhone,
+        countryNameDirect: countryFromActive,
         price: parseFloat(h.cost||0),
         status: String(h.status||""),
         smsCode: extractedCode,
@@ -3110,6 +3117,12 @@ function renderHistory(){
   if(histFilter==="success") filtered = heroHistory.filter(h=>String(h.status)==="6"||String(h.status)==="3"||h.smsCode);
   else if(histFilter==="cancel") filtered = heroHistory.filter(h=>String(h.status)==="8"||String(h.status)==="9");
   else if(histFilter==="pending") filtered = heroHistory.filter(h=>["1","2","4"].includes(String(h.status)));
+  // En yeniler önce
+  filtered = [...filtered].sort((a,b)=>{
+    const da = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const db2 = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return db2 - da;
+  });
   
   document.getElementById("history-badge").textContent = filtered.length;
   document.getElementById("no-history").style.display = filtered.length?"none":"block";
@@ -3121,7 +3134,7 @@ function renderHistory(){
     const color = SERVICE_COLORS[svcKey]||"#8b5cf6";
     const icon = SERVICE_ICONS[svcKey]||"ti-message-2";
     const svcName = h.serviceName||"—";
-    const countryName = h.countryCode!=null?(COUNTRY_NAMES[h.countryCode]||("Ülke "+h.countryCode)):"—";
+    const countryName = h.countryNameDirect||getCountryName(h.countryCode)||"—";
     return `<tr>
       <td style="font-size:11px;color:var(--text3)">${h.id||"—"}</td>
       <td><div style="display:flex;align-items:center;gap:5px">${svcKey?`<div style="width:18px;height:18px;border-radius:4px;background:${color}20;display:flex;align-items:center;justify-content:center"><i class="ti ${icon}" style="color:${color};font-size:10px"></i></div>`:""}
