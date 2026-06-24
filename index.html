@@ -2817,7 +2817,7 @@ const COUNTRY_NAMES = {
   6:"İndonezya",7:"Malezya",8:"Kenya",9:"Tanzanya",10:"Vietnam",11:"Etiyopya",
   12:"Gana",13:"Mozambik",14:"Moldova",22:"Türkiye",29:"ABD",
   31:"İngiltere",33:"Fransa",34:"İspanya",39:"İtalya",44:"Hollanda",
-  49:"Almanya",55:"Brezilya",57:"Kolombiya",62:"Hindistan",66:"Tayland",
+  49:"Almanya",55:"Brezilya",57:"Kolombiya",62:"Hindistan",64:"Endonezya",66:"Tayland",
   77:"Meksika",84:"Pakistan",86:"Mısır",88:"Nijerya",91:"Bangladeş",
   98:"İran",104:"Arjantin",110:"Peru",115:"Polonya",118:"Suudi Arabistan",
   119:"Cezayir",121:"Fas",122:"Tunus",123:"Suriye",124:"Irak",
@@ -2976,8 +2976,9 @@ async function loadHeroCountries(){
 }
 
 function getCountryName(code){
+  if(code==null||code===undefined) return "—";
   const id = parseInt(code);
-  return heroCountryMap[id] || COUNTRY_NAMES[id] || ("Ülke "+code);
+  return heroCountryMap[id] || COUNTRY_NAMES[id] || ("Ülke "+id);
 }
 
 async function loadAllSms(){
@@ -3037,15 +3038,35 @@ function stopAutoRefresh(){
 let historyPage = 0;
 const HIST_PAGE_SIZE = 100;
 
-function normalizeHistoryItem(h){
-  const smsMap2 = {};
-  smsLogs.forEach(s=>{ if(s.activation_id) smsMap2[String(s.activation_id)] = s; });
-  const activeMap2 = {};
-  activeActivationsData.forEach(a=>{ activeMap2[String(a.activationId)] = a; });
+function normalizeHistoryItem(h, smsMap2, activeMap2){
+  if(!smsMap2){ smsMap2={}; smsLogs.forEach(s=>{ if(s.activation_id) smsMap2[String(s.activation_id)]=s; }); }
+  if(!activeMap2){ activeMap2={}; activeActivationsData.forEach(a=>{ activeMap2[String(a.activationId)]=a; }); }
   const id = String(h.id||"");
   const smsLog = smsMap2[id]||{};
   const activeMatch = activeMap2[id]||{};
-  const svcKey = (h.service||activeMatch.serviceCode||smsLog.service||"").toLowerCase();
+  // SMS metninden servis tahmini
+  function guessServiceFromSms(text){
+    if(!text) return "";
+    const t = text.toLowerCase();
+    if(t.includes("whatsapp")) return "wa";
+    if(t.includes("telegram")) return "tg";
+    if(t.includes("instagram")) return "ig";
+    if(t.includes("facebook") || t.includes("fb")) return "fb";
+    if(t.includes("google")) return "gg";
+    if(t.includes("twitter") || t.includes("x.com")) return "tw";
+    if(t.includes("tinder")) return "ti";
+    if(t.includes("discord")) return "ds";
+    if(t.includes("tiktok") || t.includes("tik tok")) return "tt";
+    if(t.includes("linkedin")) return "ln";
+    if(t.includes("amazon")) return "am";
+    if(t.includes("uber")) return "ub";
+    if(t.includes("netflix")) return "nf";
+    if(t.includes("youtube")) return "yt";
+    return "";
+  }
+  const rawSmsForGuess = h.sms||smsLog.text||null;
+  const guessedSvc = guessServiceFromSms(rawSmsForGuess);
+  const svcKey = (h.service||activeMatch.serviceCode||smsLog.service||guessedSvc||"").toLowerCase();
   const svcName = SERVICE_NAMES[svcKey]||activeMatch.serviceName||smsLog.service_name||(svcKey?svcKey.toUpperCase():null)||"—";
   const rawSms = h.sms||smsLog.text||null;
   let extractedCode = smsLog.code||null;
@@ -3058,11 +3079,11 @@ function normalizeHistoryItem(h){
   else if(phoneStr.startsWith("994")) cfp=132; // Azerbaycan
   else if(phoneStr.startsWith("374")) cfp=134; // Ermenistan
   else if(phoneStr.startsWith("905")||phoneStr.startsWith("90")) cfp=22; // Türkiye
-  else if(phoneStr.startsWith("91")) cfp=62; // Hindistan
+  else if(phoneStr.startsWith("91")) cfp=62; // Hindistan (Hero SMS ID)
   else if(phoneStr.startsWith("86")) cfp=3; // Çin
   else if(phoneStr.startsWith("84")) cfp=10; // Vietnam
   else if(phoneStr.startsWith("63")) cfp=4; // Filipinler
-  else if(phoneStr.startsWith("62")) cfp=6; // Endonezya
+  else if(phoneStr.startsWith("62")) cfp=64; // Endonezya
   else if(phoneStr.startsWith("57")) cfp=57; // Kolombiya
   else if(phoneStr.startsWith("56")) cfp=151; // Şili
   else if(phoneStr.startsWith("55")) cfp=104; // Brezilya
@@ -3097,7 +3118,12 @@ async function loadMoreHistory(reset=false){
     const res = await fetch(`${HERO_BASE}?action=getHistory&start=${historyPage*HIST_PAGE_SIZE}&limit=${HIST_PAGE_SIZE}`);
     const data = await res.json();
     const rawHistory = Array.isArray(data)?data:(data.history||[]);
-    const newItems = rawHistory.map(normalizeHistoryItem);
+    // Pre-build maps once for all items
+    const smsMap3 = {};
+    smsLogs.forEach(s=>{ if(s.activation_id) smsMap3[String(s.activation_id)]=s; });
+    const activeMap3 = {};
+    activeActivationsData.forEach(a=>{ activeMap3[String(a.activationId)]=a; });
+    const newItems = rawHistory.map(h=>normalizeHistoryItem(h, smsMap3, activeMap3));
     if(reset) heroHistory=newItems; else heroHistory=[...heroHistory,...newItems];
     historyPage++;
     const moreWrap = document.getElementById("hist-load-more-wrap");
