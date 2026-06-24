@@ -3052,26 +3052,27 @@ function normalizeHistoryItem(h){
   if(!extractedCode && rawSms){ const m = String(rawSms).match(/\d{4,8}/); extractedCode = m?m[0]:null; }
   const phoneStr = String(h.phone||"");
   let cfp = null;
-  if(phoneStr.startsWith("90")) cfp=22;
-  else if(phoneStr.startsWith("7")) cfp=0;
-  else if(phoneStr.startsWith("38")) cfp=1;
-  else if(phoneStr.startsWith("56")) cfp=151;
-  else if(phoneStr.startsWith("55")) cfp=104;
-  else if(phoneStr.startsWith("62")) cfp=6;
-  else if(phoneStr.startsWith("63")) cfp=4;
-  else if(phoneStr.startsWith("84")) cfp=10;
-  else if(phoneStr.startsWith("91")) cfp=62;
-  else if(phoneStr.startsWith("86")) cfp=3;
-  else if(phoneStr.startsWith("1")) cfp=29;
-  else if(phoneStr.startsWith("44")) cfp=31;
-  else if(phoneStr.startsWith("49")) cfp=49;
-  else if(phoneStr.startsWith("33")) cfp=33;
-  else if(phoneStr.startsWith("57")) cfp=57;
-  else if(phoneStr.startsWith("52")) cfp=77;
-  else if(phoneStr.startsWith("998")) cfp=135;
-  else if(phoneStr.startsWith("374")) cfp=134;
-  else if(phoneStr.startsWith("994")) cfp=132;
-  else if(phoneStr.startsWith("995")) cfp=133;
+  // Uzun prefix'ler önce kontrol edilmeli
+  if(phoneStr.startsWith("998")) cfp=135; // Özbekistan
+  else if(phoneStr.startsWith("995")) cfp=133; // Gürcistan
+  else if(phoneStr.startsWith("994")) cfp=132; // Azerbaycan
+  else if(phoneStr.startsWith("374")) cfp=134; // Ermenistan
+  else if(phoneStr.startsWith("905")||phoneStr.startsWith("90")) cfp=22; // Türkiye
+  else if(phoneStr.startsWith("91")) cfp=62; // Hindistan
+  else if(phoneStr.startsWith("86")) cfp=3; // Çin
+  else if(phoneStr.startsWith("84")) cfp=10; // Vietnam
+  else if(phoneStr.startsWith("63")) cfp=4; // Filipinler
+  else if(phoneStr.startsWith("62")) cfp=6; // Endonezya
+  else if(phoneStr.startsWith("57")) cfp=57; // Kolombiya
+  else if(phoneStr.startsWith("56")) cfp=151; // Şili
+  else if(phoneStr.startsWith("55")) cfp=104; // Brezilya
+  else if(phoneStr.startsWith("52")) cfp=77; // Meksika
+  else if(phoneStr.startsWith("49")) cfp=49; // Almanya
+  else if(phoneStr.startsWith("44")) cfp=31; // İngiltere
+  else if(phoneStr.startsWith("38")) cfp=1; // Ukrayna
+  else if(phoneStr.startsWith("33")) cfp=33; // Fransa
+  else if(phoneStr.startsWith("7")) cfp=0; // Rusya
+  else if(phoneStr.startsWith("1")) cfp=29; // ABD
   return { id, service:svcKey, serviceName:svcName, phoneNumber:String(h.phone||"—"),
     countryCode:h.country!=null?parseInt(h.country):cfp, countryNameDirect:activeMatch.countryName||null,
     price:parseFloat(h.cost||0), status:String(h.status||""), smsCode:extractedCode, smsText:rawSms, createdAt:h.date||null };
