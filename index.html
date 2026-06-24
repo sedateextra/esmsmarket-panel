@@ -1404,6 +1404,7 @@ function initDash(){
   fetchHeroBalance();
   loadActiveActivations();
   loadHeroCountries();
+  updateLastTxDates();
 }
 
 function showPage(id,btn){
@@ -1465,6 +1466,7 @@ function renderCustomers(){
     <td style="color:var(--text2);font-size:11px" title="${c.email}">${c.email}</td>
     <td style="font-weight:700;color:${(c.balance||0)>0?"var(--success)":"var(--text3)"}">${fmt(c.balance)}</td>
     <td style="color:var(--text3);font-size:11px">${c.since||"—"}</td>
+    <td style="color:var(--text3);font-size:11px" id="last-tx-${c.id}">—</td>
     <td><span style="font-size:10px;color:${c.notes&&c.notes.length>0?"var(--warning)":"var(--text3)"}">${c.notes&&c.notes.length>0?c.notes.length+" not":"—"}</span></td>
     <td><div class="inline-actions">
       <button class="btn-xs" onclick="openNoteModal('${c.id}')" title="Not ekle"><i class="ti ti-notes"></i></button>
@@ -1651,10 +1653,19 @@ async function addTransaction(){
   if(data&&data[0]) transactions.unshift(data[0]);
   cust.balance=(cust.balance||0)+total;
   await db.from("customers").update({balance:cust.balance}).eq("id",custId);
+  // Bakiye geçmişi kaydet
+  const oldBal = (cust.balance||0) - total;
+  await db.from("balance_history").insert({
+    cust_id: custId, cust_name: cust.name,
+    old_balance: oldBal, new_balance: cust.balance,
+    change_amount: total,
+    reason: `Yükleme — ${fmt(amt)}${bonus>0?" +"+fmt(bonus)+" bonus":""} (${type})`,
+    user_name: currentUser,
+  });
   addLog("add",`Yatırım — ${fmt(amt)}${bonus>0?" +"+fmt(bonus)+" bonus":""} (${type})`,cust.name);
   tgYatirim(tx, cust);
   showLoading(false);
-  renderNewTxTable();renderSidebar();updateKasaMetrics();renderCustomers();clearTxForm();renderTop10();
+  renderNewTxTable();renderSidebar();updateKasaMetrics();renderCustomers();clearTxForm();renderTop10();updateLastTxDates();
 }
 
 async function cancelTransaction(txId){
@@ -1668,6 +1679,16 @@ async function cancelTransaction(txId){
   if(cust){
     cust.balance=Math.max(0,(cust.balance||0)-tx.total);
     await db.from("customers").update({balance:cust.balance}).eq("id",cust.id);
+  }
+  if(cust){
+    await db.from("balance_history").insert({
+      cust_id: cust.id, cust_name: cust.name,
+      old_balance: (cust.balance||0) + tx.total,
+      new_balance: cust.balance,
+      change_amount: -tx.total,
+      reason: `İptal — ${fmt(tx.amount)} (${tx.type})`,
+      user_name: currentUser,
+    });
   }
   addLog("cancel",`İşlem iptal edildi — ${fmt(tx.amount)} (${tx.type})`,tx.cust_name);
   showLoading(false);
@@ -1700,6 +1721,64 @@ function renderNewTxTable(){
   }).join("");
 }
 function clearTxForm(){["new-cust-select","new-amount","new-note"].forEach(i=>document.getElementById(i).value="");document.getElementById("new-type").value="Havale";document.getElementById("bonus-info").classList.add("hidden");}
+
+function updateLastTxDates(){
+  // Her üye için son işlem tarihini göster
+  customers.forEach(c=>{
+    const el = document.getElementById("last-tx-"+c.id);
+    if(!el) return;
+    const custTx = transactions.filter(t=>t.cust_id===c.id&&!t.cancelled);
+    if(custTx.length===0){ el.textContent="—"; return; }
+    // En son işlem (created_at varsa onu kullan, yoksa date)
+    const lastTx = custTx.reduce((a,b)=>{
+      const da = a.created_at?new Date(a.created_at):new Date(0);
+      const db2 = b.created_at?new Date(b.created_at):new Date(0);
+      return da>db2?a:b;
+    });
+    const dt = lastTx.created_at 
+      ? new Date(lastTx.created_at).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})
+      : lastTx.date||"—";
+    el.textContent = dt;
+  });
+}
+
+async function openBalanceHistory(custId){
+  const cust = customers.find(c=>c.id===custId);
+  if(!cust) return;
+  const {data} = await db.from("balance_history").select("*").eq("cust_id",custId).order("created_at",{ascending:false}).limit(50);
+  const history = data||[];
+  const modal = document.createElement("div");
+  modal.className = "overlay-wrap";
+  modal.style.cssText = "display:flex;position:fixed;inset:0;z-index:9999";
+  modal.innerHTML = `<div class="modal" style="max-width:500px">
+    <div class="modal-hdr"><h3>Bakiye geçmişi — ${cust.name}</h3><button onclick="this.closest('.overlay-wrap').remove()"><i class="ti ti-x"></i></button></div>
+    <div style="margin-bottom:12px;padding:10px;background:var(--card2);border-radius:10px;display:flex;justify-content:space-between">
+      <span style="font-size:12px;color:var(--text2)">Mevcut bakiye</span>
+      <span style="font-size:14px;font-weight:700;color:var(--success)">${fmt(cust.balance||0)}</span>
+    </div>
+    ${history.length===0?`<div style="text-align:center;padding:2rem;color:var(--text3)">Geçmiş bulunamadı.</div>`:`
+    <div style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+      ${history.map(h=>{
+        const isPos = h.change_amount>=0;
+        const dt = h.created_at ? new Date(h.created_at).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+new Date(h.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}) : "—";
+        return `<div style="background:var(--card2);border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:8px;background:${isPos?"rgba(16,185,129,.15)":"rgba(239,68,68,.15)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ${isPos?"ti-arrow-up":"ti-arrow-down"}" style="color:${isPos?"var(--success)":"var(--danger)"};font-size:14px"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--text)">${h.reason||"—"}</div>
+            <div style="font-size:10px;color:var(--text3)">${dt} · ${h.user_name||"—"}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:13px;font-weight:700;color:${isPos?"var(--success)":"var(--danger)"}">${isPos?"+":""}${fmt(h.change_amount)}</div>
+            <div style="font-size:10px;color:var(--text3)">${fmt(h.new_balance)}</div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`}
+  </div>`;
+  document.body.appendChild(modal);
+}
 
 function renderSidebar(){
   const active=transactions.filter(t=>!t.cancelled).slice(0,5);
