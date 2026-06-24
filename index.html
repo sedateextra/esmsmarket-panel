@@ -106,8 +106,7 @@ tr:hover td{background:var(--card2)}
 .btn-cancel{font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .bonus-info{font-size:12px;padding:10px 12px;border-radius:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--success);margin-bottom:10px}
 .kasa-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
-.db-tooltip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--text2);white-space:nowrap;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:180px}
-.db-tooltip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)}
+.db-tooltip{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--text2);white-space:nowrap;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.6);min-width:180px;pointer-events:none}
 .metric:hover .db-tooltip{display:block}
 .kval-income{color:var(--success)}.kval-bonus{color:var(--warning)}.kval-expense{color:var(--danger)}
 .chart-wrap{position:relative;height:175px;margin-top:.5rem}
@@ -1381,6 +1380,23 @@ function initDash(){
   loadHeroCountries();
   updateLastTxDates();
 }
+
+// Tooltip pozisyonlama
+document.addEventListener("mousemove", function(e){
+  const tooltip = document.querySelector(".metric:hover .db-tooltip");
+  if(tooltip){
+    const x = e.clientX;
+    const y = e.clientY;
+    const tw = tooltip.offsetWidth;
+    const th = tooltip.offsetHeight;
+    const vw = window.innerWidth;
+    let left = x - tw/2;
+    if(left < 8) left = 8;
+    if(left + tw > vw - 8) left = vw - tw - 8;
+    tooltip.style.left = left + "px";
+    tooltip.style.top = (y - th - 12) + "px";
+  }
+});
 
 function showPage(id,btn){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
