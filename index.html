@@ -106,8 +106,7 @@ tr:hover td{background:var(--card2)}
 .btn-cancel{font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .bonus-info{font-size:12px;padding:10px 12px;border-radius:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--success);margin-bottom:10px}
 .kasa-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
-.db-tooltip{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--text2);white-space:nowrap;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.6);min-width:180px;pointer-events:none}
-.metric:hover .db-tooltip{display:block}
+
 .kval-income{color:var(--success)}.kval-bonus{color:var(--warning)}.kval-expense{color:var(--danger)}
 .chart-wrap{position:relative;height:175px;margin-top:.5rem}
 .srow{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
@@ -371,19 +370,16 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="lbl"><i class="ti ti-calendar-today" style="color:var(--success)"></i>Bugünkü gelir</div>
         <div class="val" id="db-today-income" style="color:var(--success)">₺0</div>
         <div class="sub" id="db-month-income">Bu ay: ₺0</div>
-        <div id="db-today-tooltip" class="db-tooltip"></div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-arrow-up-circle" style="color:var(--success)"></i>Toplam gelir</div>
         <div class="val" id="db-total-income" style="color:var(--success)">₺0</div>
         <div class="sub">Tüm zamanlar</div>
-        <div id="db-income-tooltip" class="db-tooltip"></div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-scale" style="color:var(--purple)"></i>Net kasa</div>
         <div class="val" id="db-net-kasa" style="color:var(--purple)">₺0</div>
         <div class="sub">Gelir - Bonus - Gider</div>
-        <div id="db-net-tooltip" class="db-tooltip"></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
@@ -391,19 +387,16 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--warning)"></i>Komisyon</div>
         <div class="val" id="db-komisyon" style="color:var(--warning)">₺0</div>
         <div class="sub" id="db-komisyon-sub">Shopier kesintisi</div>
-        <div id="db-komisyon-tooltip" class="db-tooltip"></div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div>
         <div class="val" id="db-total-bonus" style="color:var(--warning)">₺0</div>
         <div class="sub" id="db-bonus-count">0 işlemde</div>
-        <div id="db-bonus-tooltip" class="db-tooltip"></div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--danger)"></i>Bekleyen borç</div>
         <div class="val" id="db-pending-debt" style="color:var(--danger)">₺0</div>
         <div class="sub" id="db-debt-count">0 borçlu</div>
-        <div id="db-debt-tooltip" class="db-tooltip"></div>
       </div>
     </div>
 
@@ -1380,23 +1373,6 @@ function initDash(){
   loadHeroCountries();
   updateLastTxDates();
 }
-
-// Tooltip pozisyonlama
-document.addEventListener("mousemove", function(e){
-  const tooltip = document.querySelector(".metric:hover .db-tooltip");
-  if(tooltip){
-    const x = e.clientX;
-    const y = e.clientY;
-    const tw = tooltip.offsetWidth;
-    const th = tooltip.offsetHeight;
-    const vw = window.innerWidth;
-    let left = x - tw/2;
-    if(left < 8) left = 8;
-    if(left + tw > vw - 8) left = vw - tw - 8;
-    tooltip.style.left = left + "px";
-    tooltip.style.top = (y - th - 12) + "px";
-  }
-});
 
 function showPage(id,btn){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
