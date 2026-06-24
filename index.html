@@ -2068,11 +2068,64 @@ async function applyXLImport(withTelegram=false){
 
   if(withTelegram && diffChanges.length > 0){
     const d2 = new Date();
+
+    // Son rapor tarihini al (localStorage'dan)
+    const lastReportStr = localStorage.getItem("last_xl_report_date");
+    const lastReport = lastReportStr ? new Date(lastReportStr) : null;
+    const lastReportLabel = lastReport 
+      ? lastReport.toLocaleDateString("tr-TR")+" "+lastReport.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})
+      : "—";
+
+    // Son rapor tarihinden itibaren her üyenin işlemleri
+    const activeTx2 = transactions.filter(t=>!t.cancelled);
+    const memberStats = {};
+    activeTx2.forEach(t=>{
+      if(!t.created_at) return;
+      const txDate = new Date(t.created_at);
+      if(lastReport && txDate < lastReport) return;
+      if(!memberStats[t.cust_id]) memberStats[t.cust_id] = {name:t.cust_name, yatirim:0, txCount:0};
+      memberStats[t.cust_id].yatirim += t.amount;
+      memberStats[t.cust_id].txCount++;
+    });
+
+    // Giderler (son rapor tarihinden itibaren)
+    const periodExpenses = expenses.filter(e=>{
+      if(!e.created_at) return false;
+      if(!lastReport) return true;
+      return new Date(e.created_at) >= lastReport;
+    });
+    const periodExpTotal = periodExpenses.reduce((s,e)=>s+e.amount,0);
+
     let msg = "📋 <b>ESMSMarket — Excel Güncelleme Raporu</b>\n";
-    msg += "📅 "+d2.toLocaleDateString("tr-TR")+" "+d2.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})+"\n\n";
-    const increased = diffChanges.filter(d=>d.diff>0);
+    msg += "📅 "+d2.toLocaleDateString("tr-TR")+" "+d2.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})+"\n";
+    msg += "🕐 Son rapor: "+lastReportLabel+"\n\n";
+
+    // Dönem özeti
+    const periodTx = activeTx2.filter(t=>t.created_at&&(!lastReport||new Date(t.created_at)>=lastReport));
+    const periodIncome = periodTx.reduce((s,t)=>s+t.amount,0);
+    const periodBonus = periodTx.reduce((s,t)=>s+t.bonus,0);
+    msg += "━━━━━━━━━━━━━━━━━━\n";
+    msg += "📊 <b>Dönem özeti (son rapordan bu yana):</b>\n";
+    msg += "💰 Toplam yatırım: "+fmt(periodIncome)+"\n";
+    msg += "🎁 Toplam bonus: "+fmt(periodBonus)+"\n";
+    msg += "📉 Toplam gider: "+fmt(periodExpTotal)+"\n";
+    msg += "📈 İşlem sayısı: "+periodTx.length+"\n\n";
+
+    // Aktif üye listesi (yatırım yapanlar)
+    const memberList = Object.values(memberStats).sort((a,b)=>b.yatirim-a.yatirim);
+    if(memberList.length > 0){
+      msg += "👤 <b>Dönemde yatırım yapan üyeler ("+memberList.length+"):</b>\n";
+      memberList.slice(0,10).forEach(m=>{
+        msg += "• "+m.name+": "+fmt(m.yatirim)+" ("+m.txCount+" işlem)\n";
+      });
+      if(memberList.length>10) msg+="...ve "+(memberList.length-10)+" daha\n";
+      msg+="\n";
+    }
+
+    const increased = diffChanges.filter(d=>d.diff>0&&!d.isNew);
     const decreased = diffChanges.filter(d=>d.diff<0);
     const newMembers = diffChanges.filter(d=>d.isNew);
+
     if(newMembers.length>0){
       msg += "➕ <b>Yeni üyeler ("+newMembers.length+"):</b>\n";
       newMembers.slice(0,5).forEach(d=>{msg+="• "+d.name+": "+fmt(d.newBal)+"\n";});
@@ -2091,9 +2144,19 @@ async function applyXLImport(withTelegram=false){
       if(decreased.length>5) msg+="...ve "+(decreased.length-5)+" daha\n";
       msg+="\n";
     }
-    msg+="━━━━━━━━━━━━━━━━━━\n👥 Toplam üye: "+customers.length+"\n💰 Toplam bakiye: "+fmt(customers.reduce((s,c)=>s+(c.balance||0),0));
+
+    msg+="━━━━━━━━━━━━━━━━━━\n";
+    msg+="👥 Toplam üye: "+customers.length+"\n";
+    msg+="💰 Toplam bakiye: "+fmt(customers.reduce((s,c)=>s+(c.balance||0),0));
+
     await sendTelegram(msg);
     addLog("add","Excel raporu Telegram'a gönderildi","—");
+
+    // Son rapor tarihini kaydet
+    localStorage.setItem("last_xl_report_date", d2.toISOString());
+  } else if(withTelegram) {
+    // Değişiklik yok ama gönder dediyse
+    localStorage.setItem("last_xl_report_date", new Date().toISOString());
   }
 
   alert(`Tamamlandı: ${added} yeni, ${updated} güncellendi.${withTelegram?" Telegram'a gönderildi!":""}`);
