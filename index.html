@@ -1002,6 +1002,69 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
+  <!-- AKTİVASYON DETAY MODALİ -->
+  <div class="overlay-wrap" id="activation-modal" style="display:none">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-hdr">
+        <h3 id="act-modal-title">Aktivasyon Detayı</h3>
+        <button onclick="closeActivationModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="act-modal-body" style="display:flex;flex-direction:column;gap:12px">
+        <!-- Servis + numara -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Servis</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div id="act-svc-icon" style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center"></div>
+              <span id="act-svc-name" style="font-size:14px;font-weight:700"></span>
+            </div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Numara</div>
+            <div id="act-phone" style="font-size:14px;font-weight:700;color:var(--text)"></div>
+          </div>
+        </div>
+        <!-- Ülke + fiyat + durum -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Ülke</div>
+            <div id="act-country" style="font-size:13px;font-weight:600"></div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Fiyat</div>
+            <div id="act-price" style="font-size:13px;font-weight:600;color:var(--warning)"></div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Kalan süre</div>
+            <div id="act-time-left" style="font-size:13px;font-weight:600;color:var(--purple)"></div>
+          </div>
+        </div>
+        <!-- SMS kodu -->
+        <div id="act-sms-wrap" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;display:none">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">SMS Kodu</div>
+          <div id="act-sms-code" style="font-size:22px;font-weight:700;color:var(--success);letter-spacing:4px"></div>
+          <div id="act-sms-text" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+        </div>
+        <!-- Zaman bilgisi -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Başlangıç</div>
+            <div id="act-start" style="font-size:12px;color:var(--text2)"></div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Bitiş</div>
+            <div id="act-end" style="font-size:12px;color:var(--text2)"></div>
+          </div>
+        </div>
+        <!-- Durum -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+          <div id="act-status-badge"></div>
+          <button onclick="closeActivationModal()" class="btn-sm" style="font-size:11px">Kapat</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- LOG -->
   <div id="page-log" class="page">
     <div class="srow" style="margin-bottom:1rem">
@@ -1304,7 +1367,8 @@ function showPage(id,btn){
   if(id==="top10") renderTop10();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
-  if(id==="sms-takip"){fetchHeroBalance();loadActiveActivations();renderSmsLogs();}
+  if(id==="sms-takip"){fetchHeroBalance();loadActiveActivations();renderSmsLogs();startAutoRefresh();}
+  if(id!=="sms-takip") stopAutoRefresh();
 }
 
 // ============================================================
@@ -2017,6 +2081,24 @@ async function sendDailyReport(){
     return cd.toDateString()===today.toDateString();
   }).length;
 
+  // Hero SMS günlük özeti
+  let heroSmsSection = "";
+  try {
+    const hRes = await fetch(`${HERO_BASE}?action=getHistory`);
+    const hData = await hRes.json();
+    const hHistory = Array.isArray(hData)?hData:(hData.history||[]);
+    const todayStr4 = today.toDateString();
+    const todayH2 = hHistory.filter(h=>h.date&&new Date(h.date).toDateString()===todayStr4);
+    const todaySuccess2 = todayH2.filter(h=>String(h.status)==="6").length;
+    const todayCancel2 = todayH2.filter(h=>String(h.status)==="8"||String(h.status)==="9").length;
+    const todaySpentH2 = todayH2.reduce((s,h)=>s+(parseFloat(h.cost)||0),0);
+    const heroBalRes = await fetch(`${HERO_BASE}?action=getBalance`);
+    const heroBalText = await heroBalRes.text();
+    const heroBal = heroBalText.startsWith("ACCESS_BALANCE:") ? parseFloat(heroBalText.split(":")[1]) : null;
+    const heroBalLine = heroBal!=null ? "\n💰 Bakiye: $"+heroBal.toFixed(2) : "";
+    heroSmsSection = "\n━━━━━━━━━━━━━━━━━━\n📱 <b>Hero SMS özeti:</b>\n✅ Başarılı: "+todaySuccess2+"\n❌ İptal/İade: "+todayCancel2+"\n💸 Harcanan: $"+todaySpentH2.toFixed(2)+heroBalLine;
+  } catch(e){}
+
   const msg = `📊 <b>ESMSMarket Günlük Rapor</b>
 📅 ${today.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})} | ${today.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})}
 
@@ -2031,7 +2113,7 @@ async function sendDailyReport(){
 🎁 <b>Toplam bonus:</b> ${fmt(totalBonus2)}
 💎 <b>Net kasa:</b> ${fmt(netKasa)}
 ⚠️ <b>Bekleyen borç:</b> ${fmt(pendingDebt)}
-👥 <b>Toplam üye:</b> ${customers.length}`;
+👥 <b>Toplam üye:</b> ${customers.length}${heroSmsSection}`;
 
   await sendTelegram(msg);
   addLog("add","Günlük rapor Telegram'a gönderildi","—");
@@ -2739,6 +2821,7 @@ async function loadActiveActivations(){
     const data = await res.json();
     const activations = data.activeActivations || {};
     const list = Object.values(activations).flatMap(s=>Object.values(s));
+    activeActivationsData = list;
     document.getElementById("active-badge").textContent = list.length;
     document.getElementById("sms-active-count").textContent = list.length;
     document.getElementById("no-active").style.display = list.length?"none":"block";
@@ -2759,6 +2842,85 @@ async function loadActiveActivations(){
       </tr>`;
     }).join("");
   } catch(e){ console.error("Active activations error:", e); }
+}
+
+let activeActivationsData = [];
+let autoRefreshTimer = null;
+
+function openActivationModal(activationId){
+  const a = activeActivationsData.find(x=>String(x.activationId)===String(activationId));
+  if(!a) return;
+  
+  const svcKey = (a.serviceCode||"").toLowerCase();
+  const svcName = SERVICE_NAMES[svcKey]||a.serviceCode||"—";
+  const color = SERVICE_COLORS[svcKey]||"#8b5cf6";
+  const icon = SERVICE_ICONS[svcKey]||"ti-message-2";
+  const countryName = COUNTRY_NAMES[parseInt(a.countryCode)]||("Ülke "+a.countryCode);
+
+  // Kalan süre hesapla
+  const estDate = a.estDate ? new Date(a.estDate) : null;
+  let timeLeft = "—";
+  if(estDate){
+    const diff = estDate - new Date();
+    if(diff > 0){
+      const mins = Math.floor(diff/60000);
+      const secs = Math.floor((diff%60000)/1000);
+      timeLeft = mins+"dk "+secs+"sn";
+    } else {
+      timeLeft = "Süre doldu";
+    }
+  }
+
+  const statusMap = {"1":"Bekliyor","2":"SMS Alındı","3":"Tamamlandı","4":"Yeniden Gönder","8":"İptal","9":"İade"};
+  const statusLabel = statusMap[String(a.activationStatus)]||("Durum "+a.activationStatus);
+  const statusColor = a.activationStatus==="2"?"var(--success)":["8","9"].includes(String(a.activationStatus))?"var(--danger)":"var(--purple)";
+
+  document.getElementById("act-modal-title").textContent = svcName+" — #"+activationId;
+  document.getElementById("act-svc-icon").innerHTML = `<i class="ti ${icon}" style="color:${color};font-size:14px"></i>`;
+  document.getElementById("act-svc-icon").style.background = color+"20";
+  document.getElementById("act-svc-name").textContent = svcName;
+  document.getElementById("act-phone").textContent = a.phoneNumber||"—";
+  document.getElementById("act-country").textContent = countryName;
+  document.getElementById("act-price").textContent = "$"+parseFloat(a.activationCost||0).toFixed(4);
+  document.getElementById("act-time-left").textContent = timeLeft;
+  document.getElementById("act-start").textContent = (a.activationTime||"—").substring(0,16);
+  document.getElementById("act-end").textContent = (a.estDate||"—").substring(0,16);
+  document.getElementById("act-status-badge").innerHTML = `<span style="font-size:12px;padding:4px 12px;border-radius:10px;background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;font-weight:600">${statusLabel}</span>`;
+
+  // SMS kodu varsa göster
+  if(a.smsCode){
+    document.getElementById("act-sms-wrap").style.display="block";
+    document.getElementById("act-sms-code").textContent = a.smsCode;
+    document.getElementById("act-sms-text").textContent = a.smsText||"";
+  } else {
+    document.getElementById("act-sms-wrap").style.display="none";
+  }
+
+  document.getElementById("activation-modal").style.display="flex";
+}
+
+function closeActivationModal(){
+  document.getElementById("activation-modal").style.display="none";
+}
+
+function startAutoRefresh(){
+  if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(async ()=>{
+    if(document.getElementById("page-sms-takip").classList.contains("active")){
+      await loadActiveActivations();
+      // Açık modal varsa güncelle
+      const modal = document.getElementById("activation-modal");
+      if(modal.style.display==="flex"){
+        const title = document.getElementById("act-modal-title").textContent;
+        const id = title.split("#")[1];
+        if(id) openActivationModal(id);
+      }
+    }
+  }, 30000);
+}
+
+function stopAutoRefresh(){
+  if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
 }
 
 async function loadHistory(){
