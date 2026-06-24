@@ -106,6 +106,9 @@ tr:hover td{background:var(--card2)}
 .btn-cancel{font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .bonus-info{font-size:12px;padding:10px 12px;border-radius:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--success);margin-bottom:10px}
 .kasa-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
+.db-tooltip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--text2);white-space:nowrap;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:180px}
+.db-tooltip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border)}
+.metric:hover .db-tooltip{display:block}
 .kval-income{color:var(--success)}.kval-bonus{color:var(--warning)}.kval-expense{color:var(--danger)}
 .chart-wrap{position:relative;height:175px;margin-top:.5rem}
 .srow{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
@@ -365,43 +368,43 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 
     <!-- ÜST METRİKLER: 3+3 grid -->
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px">
-      <!-- Bugünkü gelir -->
-      <div class="metric metric-accent">
+      <div class="metric metric-accent" style="position:relative">
         <div class="lbl"><i class="ti ti-calendar-today" style="color:var(--success)"></i>Bugünkü gelir</div>
         <div class="val" id="db-today-income" style="color:var(--success)">₺0</div>
         <div class="sub" id="db-month-income">Bu ay: ₺0</div>
+        <div id="db-today-tooltip" class="db-tooltip"></div>
       </div>
-      <!-- Toplam gelir -->
-      <div class="metric">
+      <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-arrow-up-circle" style="color:var(--success)"></i>Toplam gelir</div>
         <div class="val" id="db-total-income" style="color:var(--success)">₺0</div>
         <div class="sub">Tüm zamanlar</div>
+        <div id="db-income-tooltip" class="db-tooltip"></div>
       </div>
-      <!-- Toplam gider -->
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-arrow-down-circle" style="color:var(--danger)"></i>Toplam gider</div>
-        <div class="val" id="db-total-expense" style="color:var(--danger)">₺0</div>
-        <div class="sub">Tüm zamanlar</div>
+      <div class="metric" style="position:relative">
+        <div class="lbl"><i class="ti ti-scale" style="color:var(--purple)"></i>Net kasa</div>
+        <div class="val" id="db-net-kasa" style="color:var(--purple)">₺0</div>
+        <div class="sub">Gelir - Bonus - Gider</div>
+        <div id="db-net-tooltip" class="db-tooltip"></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
-      <!-- Bonus maliyeti -->
-      <div class="metric">
+      <div class="metric" style="position:relative">
+        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--warning)"></i>Komisyon</div>
+        <div class="val" id="db-komisyon" style="color:var(--warning)">₺0</div>
+        <div class="sub" id="db-komisyon-sub">Shopier kesintisi</div>
+        <div id="db-komisyon-tooltip" class="db-tooltip"></div>
+      </div>
+      <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div>
         <div class="val" id="db-total-bonus" style="color:var(--warning)">₺0</div>
         <div class="sub" id="db-bonus-count">0 işlemde</div>
+        <div id="db-bonus-tooltip" class="db-tooltip"></div>
       </div>
-      <!-- Bugünkü borçlu -->
-      <div class="metric">
+      <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--danger)"></i>Bekleyen borç</div>
         <div class="val" id="db-pending-debt" style="color:var(--danger)">₺0</div>
         <div class="sub" id="db-debt-count">0 borçlu</div>
-      </div>
-      <!-- Aktif üye -->
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-users" style="color:var(--purple)"></i>Aktif üye</div>
-        <div class="val" id="db-active-members" style="color:var(--purple)">0</div>
-        <div class="sub" id="db-today-new">Bugün yeni: 0</div>
+        <div id="db-debt-tooltip" class="db-tooltip"></div>
       </div>
     </div>
 
@@ -901,7 +904,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <button id="smstab-active" onclick="setSmsTab('active',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;font-weight:600;background:var(--grad);color:#fff">⚡ Aktif aktivasyonlar</button>
       <button id="smstab-history" onclick="setSmsTab('history',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📋 Geçmiş işlemler</button>
       <button id="smstab-country" onclick="setSmsTab('country',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">🌍 Ülke istatistikleri</button>
-      <button id="smstab-logs" onclick="setSmsTab('logs',this)" style="flex:1;font-size:11px;padding:7px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📱 SMS log</button>
+
     </div>
 
     <!-- AKTİF AKTİVASYONLAR -->
@@ -974,35 +977,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
     </div>
 
-    <!-- SMS LOG -->
-    <div id="smstab-logs-content" style="display:none">
-      <div class="card">
-        <div class="card-title">
-          <div class="card-title-left"><i class="ti ti-list"></i>Webhook SMS log</div>
-          <div style="display:flex;gap:6px">
-            <input type="text" id="sms-search" placeholder="Servis veya kod ara..." oninput="renderSmsLogs()" style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);width:160px">
-            <select id="sms-service-filter" onchange="renderSmsLogs()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
-              <option value="">Tüm servisler</option>
-              <option value="tg">Telegram</option>
-              <option value="wa">WhatsApp</option>
-              <option value="ig">Instagram</option>
-              <option value="fb">Facebook</option>
-              <option value="tw">Twitter/X</option>
-              <option value="gg">Google</option>
-              <option value="ti">Tinder</option>
-              <option value="vk">VK</option>
-              <option value="ds">Discord</option>
-            </select>
-          </div>
-        </div>
-        <table>
-          <colgroup><col style="width:14%"><col style="width:8%"><col style="width:10%"><col style="width:28%"><col style="width:16%"><col style="width:24%"></colgroup>
-          <thead><tr><th>Servis</th><th>Ülke</th><th>Kod</th><th>Mesaj</th><th>Aktivasyon ID</th><th>Tarih / Saat</th></tr></thead>
-          <tbody id="sms-body"></tbody>
-        </table>
-        <div id="no-sms" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz SMS kaydı yok.</div>
-      </div>
-    </div>
+
 
     <!-- TOP ÜLKELER -->
     <div class="card" style="margin-top:12px;margin-bottom:0">
@@ -1783,7 +1758,23 @@ async function openBalanceHistory(custId){
 function renderSidebar(){
   const active=transactions.filter(t=>!t.cancelled).slice(0,5);
   const icClass=t=>t.type==="Havale"?"ic-bank":t.type==="Kripto"?"ic-crypto":"ic-card";
-  document.getElementById("tx-list").innerHTML=active.length?active.map(t=>`<div class="tx-item"><div class="tx-icon ${icClass(t)}"><i class="ti ${typeIcons[t.type]||"ti-cash"}"></i></div><div class="tx-info"><div class="tx-name">${t.cust_name}</div><div class="tx-date">${t.type} · ${t.user_name}</div></div><div class="tx-amt">${fmt(t.amount)}</div></div>`).join(""):'<div style="font-size:12px;color:var(--text3);padding:.5rem 0">Henüz işlem yok.</div>';
+  const tGrads={"Havale":"linear-gradient(135deg,#3b82f6,#1d4ed8)","Kredi kartı":"linear-gradient(135deg,#10b981,#059669)","Kripto":"linear-gradient(135deg,#f59e0b,#d97706)"};
+  document.getElementById("tx-list").innerHTML=active.length?active.map(t=>{
+    const isS=t.user_name==="shopier-bot";
+    const gr=isS?"linear-gradient(135deg,#10b981,#047857)":(tGrads[t.type]||"var(--card2)");
+    const em=isS?"🤖":({"Havale":"🏦","Kredi kartı":"💳","Kripto":"₿"}[t.type]||"💰");
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="width:30px;height:30px;border-radius:8px;background:${gr};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${em}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.cust_name}</div>
+        <div style="font-size:10px;color:var(--text3)">${t.type}${isS?" · 🤖 Shopier":""}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:12px;font-weight:700;color:var(--success)">${fmt(t.amount)}</div>
+        <div style="font-size:10px;color:var(--text3)">${t.date||""}</div>
+      </div>
+    </div>`;
+  }).join(""):'<div style="font-size:12px;color:var(--text3);padding:.5rem 0;text-align:center">Henüz işlem yok.</div>';
 }
 
 // ============================================================
@@ -3303,7 +3294,7 @@ function renderCountryStats(){
 
 function setSmsTab(tab, btn){
   currentSmsTab = tab;
-  ["active","history","country","logs"].forEach(t=>{
+  ["active","history","country"].forEach(t=>{
     const el = document.getElementById("smstab-"+t+"-content");
     if(el) el.style.display = t===tab?"block":"none";
     const b = document.getElementById("smstab-"+t);
@@ -3312,7 +3303,7 @@ function setSmsTab(tab, btn){
   btn.style.background="var(--grad)";btn.style.color="#fff";
   if(tab==="active") loadActiveActivations();
   if(tab==="history"||tab==="country") loadHistory();
-  if(tab==="logs") renderSmsLogs();
+
 }
 
 function setHistFilter(filter, btn){
