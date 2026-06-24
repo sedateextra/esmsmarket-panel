@@ -2849,27 +2849,30 @@ async function fetchHeroBalance(){
 
 async function loadActiveActivations(){
   try {
-    const res = await fetch(`${HERO_BASE}?action=getActiveActivations&api_key=${HERO_API_KEY}`);
+    const res = await fetch(`${HERO_BASE}?action=getActiveActivations&limit=100`);
     const data = await res.json();
-    const activations = data.activeActivations || {};
-    const list = Object.values(activations).flatMap(s=>Object.values(s));
+    const list = data.data || [];
     activeActivationsData = list;
     document.getElementById("active-badge").textContent = list.length;
     document.getElementById("sms-active-count").textContent = list.length;
     document.getElementById("no-active").style.display = list.length?"none":"block";
     document.getElementById("active-body").innerHTML = list.map(a=>{
-      const svcName = a.serviceName||a.service||"—";
-      const color = SERVICE_COLORS[a.service]||"#8b5cf6";
-      const icon = SERVICE_ICONS[a.service]||"ti-message-2";
-      const countryName = COUNTRY_NAMES[a.countryCode]||("Ülke "+a.countryCode);
-      const dt = a.createdAt ? new Date(a.createdAt).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+new Date(a.createdAt).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}) : "—";
-      return `<tr>
-        <td style="font-size:11px;color:var(--text3)">${a.id||"—"}</td>
+      const svcKey = (a.serviceCode||"").toLowerCase();
+      const svcName = SERVICE_NAMES[svcKey]||a.serviceCode||"—";
+      const color = SERVICE_COLORS[svcKey]||"#8b5cf6";
+      const icon = SERVICE_ICONS[svcKey]||"ti-message-2";
+      const countryName = a.countryName||getCountryName(a.countryCode);
+      const dt = a.activationTime ? a.activationTime.substring(0,16) : "—";
+      const statusMap = {"1":"Bekliyor","2":"SMS Alındı","3":"Tamamlandı","4":"Yeniden Gönder","8":"İptal","9":"İade"};
+      const statusLabel = statusMap[String(a.activationStatus)]||"Aktif";
+      const statusColor = String(a.activationStatus)==="2"?"var(--success)":["8","9"].includes(String(a.activationStatus))?"var(--danger)":"var(--purple)";
+      return `<tr onclick="openActivationModal('${a.activationId}')" style="cursor:pointer" onmouseover="this.style.background='rgba(139,92,246,.08)'" onmouseout="this.style.background=''">
+        <td style="font-size:11px;color:var(--text3)">${a.activationId||"—"}</td>
         <td><div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:5px;background:${color}20;display:flex;align-items:center;justify-content:center"><i class="ti ${icon}" style="color:${color};font-size:11px"></i></div><span style="font-size:12px;font-weight:600">${svcName}</span></div></td>
         <td style="font-size:11px">${a.phoneNumber||"—"}</td>
         <td style="font-size:11px;color:var(--text2)">${countryName}</td>
-        <td style="font-size:11px;color:var(--warning)">$${a.price||"—"}</td>
-        <td><span class="sbadge" style="background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3)">Aktif</span></td>
+        <td style="font-size:11px;color:var(--warning)">$${parseFloat(a.activationCost||0).toFixed(4)}</td>
+        <td><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40">${statusLabel}</span></td>
         <td style="font-size:11px;color:var(--text3)">${dt}</td>
       </tr>`;
     }).join("");
