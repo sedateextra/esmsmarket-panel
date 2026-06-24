@@ -988,6 +988,29 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
     </div>
 
+    <!-- TOP ÜLKELER -->
+    <div class="card" style="margin-top:12px;margin-bottom:0">
+      <div class="card-title">
+        <div class="card-title-left"><i class="ti ti-trophy" style="color:var(--warning)"></i>Hesabınıza göre en başarılı ülkeler</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="top-country-service" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+            <option value="tg">Telegram</option>
+            <option value="wa">WhatsApp</option>
+            <option value="ig">Instagram</option>
+            <option value="fb">Facebook</option>
+            <option value="gg">Google</option>
+            <option value="tw">Twitter/X</option>
+            <option value="vk">VK</option>
+            <option value="ti">Tinder</option>
+          </select>
+          <button onclick="loadTopCountries()" class="btn-sm" style="font-size:11px"><i class="ti ti-refresh" style="margin-right:4px"></i>Getir</button>
+        </div>
+      </div>
+      <div id="top-countries-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;padding:4px 0">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;grid-column:1/-1">Servis seçip "Getir" butonuna basın.</div>
+      </div>
+    </div>
+
     <!-- SERVİS DAĞILIMI -->
     <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;margin-top:12px">
       <div class="card" style="margin-bottom:0">
@@ -1057,9 +1080,17 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           </div>
         </div>
         <!-- Durum -->
+        <!-- Tüm SMS'ler -->
+        <div id="act-all-sms-wrap" style="display:none">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Tüm SMS'ler</div>
+          <div id="act-all-sms-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
+        </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
           <div id="act-status-badge"></div>
-          <button onclick="closeActivationModal()" class="btn-sm" style="font-size:11px">Kapat</button>
+          <div style="display:flex;gap:8px">
+            <button id="act-all-sms-btn" onclick="loadAllSms()" class="btn-sm" style="font-size:11px"><i class="ti ti-messages" style="margin-right:4px"></i>Tüm SMS'leri gör</button>
+            <button onclick="closeActivationModal()" class="btn-sm" style="font-size:11px">Kapat</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1356,6 +1387,7 @@ function initDash(){
   renderSmsLogs();
   fetchHeroBalance();
   loadActiveActivations();
+  loadHeroCountries();
 }
 
 function showPage(id,btn){
@@ -2855,7 +2887,7 @@ function openActivationModal(activationId){
   const svcName = SERVICE_NAMES[svcKey]||a.serviceCode||"—";
   const color = SERVICE_COLORS[svcKey]||"#8b5cf6";
   const icon = SERVICE_ICONS[svcKey]||"ti-message-2";
-  const countryName = COUNTRY_NAMES[parseInt(a.countryCode)]||("Ülke "+a.countryCode);
+  const countryName = a.countryName||getCountryName(a.countryCode)||("Ülke "+a.countryCode);
 
   // Kalan süre hesapla
   const estDate = a.estDate ? new Date(a.estDate) : null;
@@ -2875,7 +2907,12 @@ function openActivationModal(activationId){
   const statusLabel = statusMap[String(a.activationStatus)]||("Durum "+a.activationStatus);
   const statusColor = a.activationStatus==="2"?"var(--success)":["8","9"].includes(String(a.activationStatus))?"var(--danger)":"var(--purple)";
 
+  currentActivationId = activationId;
   document.getElementById("act-modal-title").textContent = svcName+" — #"+activationId;
+  document.getElementById("act-all-sms-wrap").style.display="none";
+  document.getElementById("act-all-sms-list").innerHTML="";
+  document.getElementById("act-all-sms-btn").innerHTML="<i class='ti ti-messages' style='margin-right:4px'></i>Tüm SMS'leri gör";
+  document.getElementById("act-all-sms-btn").disabled=false;
   document.getElementById("act-svc-icon").innerHTML = `<i class="ti ${icon}" style="color:${color};font-size:14px"></i>`;
   document.getElementById("act-svc-icon").style.background = color+"20";
   document.getElementById("act-svc-name").textContent = svcName;
@@ -2901,6 +2938,61 @@ function openActivationModal(activationId){
 
 function closeActivationModal(){
   document.getElementById("activation-modal").style.display="none";
+  document.getElementById("act-all-sms-wrap").style.display="none";
+  document.getElementById("act-all-sms-list").innerHTML="";
+}
+
+let currentActivationId = null;
+let heroCountryMap = {};
+
+async function loadHeroCountries(){
+  try {
+    const res = await fetch(`${HERO_BASE}?action=getCountries`);
+    const data = await res.json();
+    if(Array.isArray(data)){
+      data.forEach(c=>{ heroCountryMap[c.id] = c.eng||c.rus||("Country "+c.id); });
+      console.log("Countries loaded:", Object.keys(heroCountryMap).length);
+    }
+  } catch(e){ console.error("Countries error:", e); }
+}
+
+function getCountryName(code){
+  const id = parseInt(code);
+  return heroCountryMap[id] || COUNTRY_NAMES[id] || ("Ülke "+code);
+}
+
+async function loadAllSms(){
+  if(!currentActivationId) return;
+  const btn = document.getElementById("act-all-sms-btn");
+  btn.textContent = "Yükleniyor...";
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${HERO_BASE}?action=getAllSms&activationId=${currentActivationId}`);
+    const data = await res.json();
+    const smsList = data.data || [];
+    const wrap = document.getElementById("act-all-sms-wrap");
+    const list = document.getElementById("act-all-sms-list");
+    if(smsList.length > 0){
+      list.innerHTML = smsList.map(s=>`
+        <div style="background:var(--card2);border-radius:8px;padding:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--text3)">${s.phoneFrom||"—"}</span>
+            <span style="font-size:10px;color:var(--text3)">${(s.date||"").substring(0,16)}</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--success)">${s.code||"—"}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${s.text||""}</div>
+        </div>`).join("");
+      wrap.style.display="block";
+    } else {
+      list.innerHTML = "<div style='font-size:12px;color:var(--text3);text-align:center;padding:1rem'>SMS bulunamadı.</div>";
+      wrap.style.display="block";
+    }
+    btn.innerHTML = "<i class='ti ti-messages' style='margin-right:4px'></i>"+smsList.length+" SMS";
+    btn.disabled = false;
+  } catch(e){
+    btn.textContent = "Hata";
+    btn.disabled = false;
+  }
 }
 
 function startAutoRefresh(){
@@ -3118,6 +3210,44 @@ const SERVICE_COLORS = {
   "ds":"#7289DA","tt":"#010101","ln":"#0A66C2","am":"#FF9900",
   "ub":"#000000","nf":"#E50914"
 };
+
+async function loadTopCountries(){
+  const service = document.getElementById("top-country-service")?.value||"tg";
+  const listEl = document.getElementById("top-countries-list");
+  listEl.innerHTML = "<div style='font-size:12px;color:var(--text3);text-align:center;padding:1rem;grid-column:1/-1'>Yükleniyor...</div>";
+  try {
+    const res = await fetch(`${HERO_BASE}?action=getTopCountriesByServiceRank&service=${service}`);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.data||[]);
+    if(list.length===0){
+      listEl.innerHTML="<div style='font-size:12px;color:var(--text3);text-align:center;padding:1rem;grid-column:1/-1'>Veri bulunamadı.</div>";
+      return;
+    }
+    const max = list[0].count||1;
+    listEl.innerHTML = list.slice(0,12).map((c,i)=>{
+      const cName = getCountryName(c.country);
+      const pct = Math.round(((c.count||0)/max)*100);
+      const price = c.price||c.retail_price||0;
+      return `<div style="background:var(--card2);border-radius:10px;padding:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;font-weight:700;color:var(--purple);min-width:18px">#${i+1}</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text)">${cName}</span>
+          </div>
+          <span style="font-size:11px;color:var(--warning);font-weight:600">$${parseFloat(price).toFixed(4)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#8b5cf6,#ec4899);border-radius:3px"></div>
+          </div>
+          <span style="font-size:10px;color:var(--text3);min-width:40px;text-align:right">${c.count||0} adet</span>
+        </div>
+      </div>`;
+    }).join("");
+  } catch(e){
+    listEl.innerHTML="<div style='font-size:12px;color:var(--danger);text-align:center;padding:1rem;grid-column:1/-1'>Hata oluştu.</div>";
+  }
+}
 
 function renderSmsLogs(){
   const q = (document.getElementById("sms-search")?.value||"").toLowerCase();
