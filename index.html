@@ -922,14 +922,30 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 
     <!-- GEÇMİŞ İŞLEMLER -->
     <div id="smstab-history-content" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
         <div style="display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:3px">
           <button id="hist-all" onclick="setHistFilter('all',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:var(--grad);color:#fff">Tümü</button>
           <button id="hist-success" onclick="setHistFilter('success',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text2)">✅ Başarılı</button>
           <button id="hist-cancel" onclick="setHistFilter('cancel',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text2)">❌ İptal/İade</button>
           <button id="hist-pending" onclick="setHistFilter('pending',this)" style="font-size:11px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text2)">⏳ Bekliyor</button>
         </div>
-        <button onclick="loadHistory()" class="btn-sm" style="font-size:11px;margin-left:auto"><i class="ti ti-refresh" style="margin-right:4px"></i>Yenile</button>
+        <!-- Tarih aralığı -->
+        <input type="date" id="hist-date-from" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+        <span style="font-size:11px;color:var(--text3)">—</span>
+        <input type="date" id="hist-date-to" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+        <!-- Sıralama -->
+        <select id="hist-sort" onchange="renderHistory()" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+          <option value="desc">↓ Yeniden eskiye</option>
+          <option value="asc">↑ Eskiden yeniye</option>
+        </select>
+        <div style="display:flex;gap:6px;margin-left:auto">
+          <button onclick="loadHistory(true)" class="btn-sm" style="font-size:11px;border-color:var(--purple);color:var(--purple)"><i class="ti ti-search" style="margin-right:4px"></i>Ara</button>
+          <button onclick="loadHistory()" class="btn-sm" style="font-size:11px"><i class="ti ti-refresh" style="margin-right:4px"></i>Yenile</button>
+        </div>
+      </div>
+      <div id="hist-load-more-wrap" style="display:none;text-align:center;margin-bottom:8px">
+        <button onclick="loadMoreHistory()" class="btn-sm" style="font-size:11px;border-color:var(--success);color:var(--success)" id="hist-load-more-btn"><i class="ti ti-plus" style="margin-right:4px"></i>Daha fazla yükle (100)</button>
+        <span id="hist-count-info" style="font-size:11px;color:var(--text3);margin-left:10px"></span>
       </div>
       <div class="card">
         <div class="card-title"><div class="card-title-left"><i class="ti ti-history"></i>Geçmiş işlemler</div><span id="history-badge" class="tbadge">0</span></div>
@@ -3018,88 +3034,90 @@ function stopAutoRefresh(){
   if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
 }
 
-async function loadHistory(){
+let historyPage = 0;
+const HIST_PAGE_SIZE = 100;
+
+function normalizeHistoryItem(h){
+  const smsMap2 = {};
+  smsLogs.forEach(s=>{ if(s.activation_id) smsMap2[String(s.activation_id)] = s; });
+  const activeMap2 = {};
+  activeActivationsData.forEach(a=>{ activeMap2[String(a.activationId)] = a; });
+  const id = String(h.id||"");
+  const smsLog = smsMap2[id]||{};
+  const activeMatch = activeMap2[id]||{};
+  const svcKey = (h.service||activeMatch.serviceCode||smsLog.service||"").toLowerCase();
+  const svcName = SERVICE_NAMES[svcKey]||activeMatch.serviceName||smsLog.service_name||(svcKey?svcKey.toUpperCase():null)||"—";
+  const rawSms = h.sms||smsLog.text||null;
+  let extractedCode = smsLog.code||null;
+  if(!extractedCode && rawSms){ const m = String(rawSms).match(/\d{4,8}/); extractedCode = m?m[0]:null; }
+  const phoneStr = String(h.phone||"");
+  let cfp = null;
+  if(phoneStr.startsWith("90")) cfp=22;
+  else if(phoneStr.startsWith("7")) cfp=0;
+  else if(phoneStr.startsWith("38")) cfp=1;
+  else if(phoneStr.startsWith("56")) cfp=151;
+  else if(phoneStr.startsWith("55")) cfp=104;
+  else if(phoneStr.startsWith("62")) cfp=6;
+  else if(phoneStr.startsWith("63")) cfp=4;
+  else if(phoneStr.startsWith("84")) cfp=10;
+  else if(phoneStr.startsWith("91")) cfp=62;
+  else if(phoneStr.startsWith("86")) cfp=3;
+  else if(phoneStr.startsWith("1")) cfp=29;
+  else if(phoneStr.startsWith("44")) cfp=31;
+  else if(phoneStr.startsWith("49")) cfp=49;
+  else if(phoneStr.startsWith("33")) cfp=33;
+  else if(phoneStr.startsWith("57")) cfp=57;
+  else if(phoneStr.startsWith("52")) cfp=77;
+  else if(phoneStr.startsWith("998")) cfp=135;
+  else if(phoneStr.startsWith("374")) cfp=134;
+  else if(phoneStr.startsWith("994")) cfp=132;
+  else if(phoneStr.startsWith("995")) cfp=133;
+  return { id, service:svcKey, serviceName:svcName, phoneNumber:String(h.phone||"—"),
+    countryCode:h.country!=null?parseInt(h.country):cfp, countryNameDirect:activeMatch.countryName||null,
+    price:parseFloat(h.cost||0), status:String(h.status||""), smsCode:extractedCode, smsText:rawSms, createdAt:h.date||null };
+}
+
+async function loadHistory(withDateFilter=false){
+  historyPage = 0;
+  heroHistory = [];
+  if(!withDateFilter){
+    const fromEl = document.getElementById("hist-date-from");
+    const toEl = document.getElementById("hist-date-to");
+    if(fromEl && !fromEl.value) fromEl.value = new Date(Date.now()-7*24*60*60*1000).toISOString().split("T")[0];
+    if(toEl && !toEl.value) toEl.value = new Date().toISOString().split("T")[0];
+  }
+  await loadMoreHistory(true);
+}
+
+async function loadMoreHistory(reset=false){
+  const btn = document.getElementById("hist-load-more-btn");
+  if(btn){btn.textContent="Yükleniyor...";btn.disabled=true;}
   try {
-    const res = await fetch(`${HERO_BASE}?action=getHistory`);
+    const res = await fetch(`${HERO_BASE}?action=getHistory&start=${historyPage*HIST_PAGE_SIZE}&limit=${HIST_PAGE_SIZE}`);
     const data = await res.json();
-    const rawHistory = Array.isArray(data) ? data : (data.history||[]);
-
-    // sms_logs ile ID eşleştir
-    const smsMap = {};
-    smsLogs.forEach(s=>{ if(s.activation_id) smsMap[String(s.activation_id)] = s; });
-
-    // activeActivationsData ile ID eşleştir (servis bilgisi için)
-    const activeMap2 = {};
-    activeActivationsData.forEach(a=>{ activeMap2[String(a.activationId)] = a; });
-
-    // Normalize - alan isimlerini düzelt
-    heroHistory = rawHistory.map(h=>{
-      const id = String(h.id||"");
-      const smsLog = smsMap[id]||{};
-      const activeMatch = activeMap2[id]||{};
-      const svcKey = (h.service||activeMatch.serviceCode||smsLog.service||"").toLowerCase();
-      const svcName = SERVICE_NAMES[svcKey]||activeMatch.serviceName||smsLog.service_name||(svcKey?svcKey.toUpperCase():null)||"—";
-      const countryFromActive = activeMatch.countryName||null;
-      const rawSms = h.sms||smsLog.text||null;
-      let extractedCode = smsLog.code||null;
-      if(!extractedCode && rawSms){
-        const m = String(rawSms).match(/\d{4,8}/);
-        extractedCode = m ? m[0] : null;
-      }
-      // Telefon kodundan ülke tahmini
-      const phoneStr = String(h.phone||"");
-      let countryFromPhone = null;
-      if(phoneStr.startsWith("90")) countryFromPhone = 22; // Türkiye
-      else if(phoneStr.startsWith("7")) countryFromPhone = 0; // Rusya
-      else if(phoneStr.startsWith("38")) countryFromPhone = 1; // Ukrayna
-      else if(phoneStr.startsWith("56")) countryFromPhone = 151; // Şili
-      else if(phoneStr.startsWith("55")) countryFromPhone = 104; // Brezilya
-      else if(phoneStr.startsWith("62")) countryFromPhone = 6; // Endonezya
-      else if(phoneStr.startsWith("63")) countryFromPhone = 4; // Filipinler
-      else if(phoneStr.startsWith("84")) countryFromPhone = 10; // Vietnam
-      else if(phoneStr.startsWith("91")) countryFromPhone = 62; // Hindistan
-      else if(phoneStr.startsWith("86")) countryFromPhone = 3; // Çin
-      else if(phoneStr.startsWith("1")) countryFromPhone = 29; // ABD
-      else if(phoneStr.startsWith("44")) countryFromPhone = 31; // İngiltere
-      else if(phoneStr.startsWith("49")) countryFromPhone = 49; // Almanya
-      else if(phoneStr.startsWith("33")) countryFromPhone = 33; // Fransa
-      else if(phoneStr.startsWith("57")) countryFromPhone = 57; // Kolombiya
-      else if(phoneStr.startsWith("52")) countryFromPhone = 77; // Meksika
-      else if(phoneStr.startsWith("998")) countryFromPhone = 135; // Özbekistan
-      else if(phoneStr.startsWith("374")) countryFromPhone = 134; // Ermenistan
-      else if(phoneStr.startsWith("994")) countryFromPhone = 132; // Azerbaycan
-      else if(phoneStr.startsWith("995")) countryFromPhone = 133; // Gürcistan
-
-      return {
-        id,
-        service: svcKey,
-        serviceName: svcName,
-        phoneNumber: String(h.phone||"—"),
-        countryCode: h.country!=null ? parseInt(h.country) : countryFromPhone,
-        countryNameDirect: countryFromActive,
-        price: parseFloat(h.cost||0),
-        status: String(h.status||""),
-        smsCode: extractedCode,
-        smsText: rawSms,
-        createdAt: h.date||null,
-      };
-    });
-
+    const rawHistory = Array.isArray(data)?data:(data.history||[]);
+    const newItems = rawHistory.map(normalizeHistoryItem);
+    if(reset) heroHistory=newItems; else heroHistory=[...heroHistory,...newItems];
+    historyPage++;
+    const moreWrap = document.getElementById("hist-load-more-wrap");
+    const countInfo = document.getElementById("hist-count-info");
+    if(moreWrap) moreWrap.style.display = rawHistory.length>=HIST_PAGE_SIZE?"block":"none";
+    if(countInfo) countInfo.textContent = heroHistory.length+" kayıt yüklendi";
     const today2 = new Date().toDateString();
     const successList = heroHistory.filter(h=>h.status==="6"||h.status==="3"||h.smsCode);
     const cancelList = heroHistory.filter(h=>h.status==="8"||h.status==="9");
     const todayList = heroHistory.filter(h=>h.createdAt&&new Date(h.createdAt).toDateString()===today2);
     const todaySpent = todayList.reduce((s,h)=>s+(parseFloat(h.price)||0),0);
-
     document.getElementById("sms-success-count").textContent = successList.length;
     document.getElementById("sms-cancel-count").textContent = cancelList.length;
     document.getElementById("sms-today-spent").textContent = "$"+todaySpent.toFixed(2);
     document.getElementById("sms-today-count").textContent = todayList.length+" aktivasyon";
-
     renderHistory();
     renderCountryStats();
-  } catch(e){ console.error("History error:", e); }
+  } catch(e){ console.error("History error:",e); }
+  finally { if(btn){btn.innerHTML="<i class='ti ti-plus' style='margin-right:4px'></i>Daha fazla yükle (100)";btn.disabled=false;} }
 }
+
 
 function getStatusLabel(status){
   const s = String(status);
@@ -3117,11 +3135,12 @@ function renderHistory(){
   if(histFilter==="success") filtered = heroHistory.filter(h=>String(h.status)==="6"||String(h.status)==="3"||h.smsCode);
   else if(histFilter==="cancel") filtered = heroHistory.filter(h=>String(h.status)==="8"||String(h.status)==="9");
   else if(histFilter==="pending") filtered = heroHistory.filter(h=>["1","2","4"].includes(String(h.status)));
-  // En yeniler önce
+  // Sıralama
+  const sortDir = document.getElementById("hist-sort")?.value||"desc";
   filtered = [...filtered].sort((a,b)=>{
     const da = a.createdAt ? new Date(a.createdAt) : new Date(0);
     const db2 = b.createdAt ? new Date(b.createdAt) : new Date(0);
-    return db2 - da;
+    return sortDir==="desc" ? db2-da : da-db2;
   });
   
   document.getElementById("history-badge").textContent = filtered.length;
