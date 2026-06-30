@@ -634,6 +634,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <button id="ktab-kart" onclick="setKasaTab('kart',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">💳 Kredi kartı</button>
       <button id="ktab-kripto" onclick="setKasaTab('kripto',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">₿ Kripto</button>
       <button id="ktab-gider" onclick="setKasaTab('gider',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📉 Giderler</button>
+      <button id="ktab-shopier-col" onclick="setKasaTab('shopier-col',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📊 Shopier Tahsilatlar</button>
     </div>
 
     <!-- SEKME METRİKLERİ -->
@@ -752,6 +753,35 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
+
+
+  <!-- SHOPİER TAHSİLATLAR -->
+  <div id="shopier-collections-wrap" style="display:none;padding:0 1rem 1rem">
+    <div class="card" style="margin-top:0">
+      <div class="card-title">
+        <div class="card-title-left"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier Tahsilat Geçmişi</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="shopier-col-count" class="tbadge">0 kayıt</span>
+          <label class="btn-sm" style="cursor:pointer;font-size:11px;border-color:var(--success);color:var(--success);display:flex;align-items:center;gap:4px">
+            <i class="ti ti-upload"></i>Excel Yükle
+            <input type="file" id="shopier-excel-input" accept=".xlsx,.csv" style="display:none" onchange="importShopierExcel(this)">
+          </label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
+        <div class="metric"><div class="lbl"><i class="ti ti-cash" style="color:var(--success)"></i>Toplam satış</div><div class="val" id="sc-total-sales" style="color:var(--success)">₺0</div></div>
+        <div class="metric"><div class="lbl"><i class="ti ti-percent" style="color:var(--danger)"></i>Toplam komisyon</div><div class="val" id="sc-total-fee" style="color:var(--danger)">₺0</div></div>
+        <div class="metric"><div class="lbl"><i class="ti ti-wallet" style="color:var(--purple)"></i>Net tahsilat</div><div class="val" id="sc-net" style="color:var(--purple)">₺0</div></div>
+        <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--warning)"></i>Eşleşen üye</div><div class="val" id="sc-matched" style="color:var(--warning)">0/0</div></div>
+      </div>
+      <table>
+        <colgroup><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:16%"><col style="width:14%"><col style="width:13%"><col style="width:12%"><col style="width:13%"></colgroup>
+        <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Komisyon</th><th>Tahsilat</th></tr></thead>
+        <tbody id="shopier-col-body"></tbody>
+      </table>
+      <div id="no-shopier-col" style="text-align:center;padding:2rem;font-size:12px;color:var(--text3)">Henüz tahsilat verisi yok. Excel dosyasını yükleyin.</div>
+    </div>
+  </div>
 
   <!-- BORÇLULAR -->
   <div id="page-borclu" class="page">
@@ -1889,6 +1919,114 @@ function renderTop10(){
 // KASA
 // ============================================================
 let kasaCurrentTab = "all";
+
+async function loadShopierCollections(){
+  const {data} = await db.from("shopier_collections").select("*").order("payment_date",{ascending:false});
+  const rows = data||[];
+  document.getElementById("shopier-col-count").textContent = rows.length+" kayıt";
+  document.getElementById("no-shopier-col").style.display = rows.length?"none":"block";
+
+  const totalSales = rows.reduce((s,r)=>s+(r.sales_price||0),0);
+  const totalFee = rows.reduce((s,r)=>s+(r.service_fee||0)+(r.vat||0),0);
+  const totalNet = rows.reduce((s,r)=>s+(r.collection||0),0);
+  const matched = rows.filter(r=>r.cust_id).length;
+
+  document.getElementById("sc-total-sales").textContent = fmt(totalSales);
+  document.getElementById("sc-total-fee").textContent = fmt(totalFee);
+  document.getElementById("sc-net").textContent = fmt(totalNet);
+  document.getElementById("sc-matched").textContent = matched+"/"+rows.length;
+
+  document.getElementById("shopier-col-body").innerHTML = rows.map(r=>`
+    <tr>
+      <td style="font-size:11px;color:var(--text3)">${r.order_id||"—"}</td>
+      <td style="font-size:11px;color:var(--text2)">${(r.order_date||"—").substring(0,10)}</td>
+      <td style="font-size:11px;color:var(--text2)">${(r.payment_date||"—").substring(0,10)}</td>
+      <td style="font-size:12px;font-weight:600">${r.customer_name||"—"}</td>
+      <td>${r.cust_name?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)">${r.cust_name}</span>`:`<span style="font-size:10px;color:var(--text3)">—</span>`}</td>
+      <td style="font-size:12px;font-weight:600;color:var(--success)">${fmt(r.sales_price||0)}</td>
+      <td style="font-size:11px;color:var(--danger)">-${fmt((r.service_fee||0)+(r.vat||0))}</td>
+      <td style="font-size:12px;font-weight:700;color:var(--purple)">${fmt(r.collection||0)}</td>
+    </tr>`).join("");
+}
+
+async function importShopierExcel(input){
+  const file = input.files[0];
+  if(!file) return;
+  const btn = input.previousElementSibling;
+  btn.textContent = "Yükleniyor...";
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:"array"});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+
+      // Header row bul
+      const header = rows[0];
+      const getIdx = (name) => header.findIndex(h=>String(h||"").includes(name));
+
+      const idxOrderId = getIdx("Sipariş No");
+      const idxOrderDate = getIdx("Sipariş Oluşma");
+      const idxPayDate = getIdx("Sipariş Ödeme");
+      const idxName = getIdx("Müşteri Adı");
+      const idxEmail = getIdx("Müşteri E-posta");
+      const idxSales = getIdx("Satış Fiyatı");
+      const idxFee = getIdx("Hizmet Bedeli");
+      const idxVat = getIdx("KDV");
+      const idxCol = getIdx("Tahsilat");
+
+      const dataRows = rows.slice(1).filter(r=>r[idxOrderId]);
+
+      // Üyelerle eşleştir
+      const custMap = {};
+      customers.forEach(c=>{ custMap[c.name.toLowerCase().trim()] = c; });
+
+      const records = dataRows.map(r=>{
+        const custNameRaw = String(r[idxName]||"").trim();
+        const custNameLow = custNameRaw.toLowerCase();
+        // Direkt eşleştirme veya kısmi eşleştirme
+        let matchedCust = custMap[custNameLow];
+        if(!matchedCust){
+          const keys = Object.keys(custMap);
+          const found = keys.find(k=>k.includes(custNameLow)||custNameLow.includes(k));
+          if(found) matchedCust = custMap[found];
+        }
+        return {
+          order_id: String(r[idxOrderId]||""),
+          order_date: String(r[idxOrderDate]||""),
+          payment_date: String(r[idxPayDate]||""),
+          customer_name: custNameRaw,
+          customer_email: String(r[idxEmail]||""),
+          sales_price: parseFloat(String(r[idxSales]||"0").replace(",","."))||0,
+          service_fee: parseFloat(String(r[idxFee]||"0").replace(",","."))||0,
+          vat: parseFloat(String(r[idxVat]||"0").replace(",","."))||0,
+          collection: parseFloat(String(r[idxCol]||"0").replace(",","."))||0,
+          cust_id: matchedCust?.id||null,
+          cust_name: matchedCust?.name||null,
+        };
+      });
+
+      // Supabase'e kaydet (upsert by order_id)
+      const chunks = [];
+      for(let i=0;i<records.length;i+=100) chunks.push(records.slice(i,i+100));
+      for(const chunk of chunks){
+        await db.from("shopier_collections").upsert(chunk, {onConflict:"order_id", ignoreDuplicates:false});
+      }
+
+      await loadShopierCollections();
+      btn.innerHTML = "<i class='ti ti-upload'></i>Excel Yükle";
+      input.value = "";
+      showToast(`✅ ${records.length} tahsilat yüklendi! ${records.filter(r=>r.cust_id).length} üye eşleşti.`);
+    } catch(e){
+      console.error("Excel import error:", e);
+      btn.innerHTML = "<i class='ti ti-upload'></i>Excel Yükle";
+      showToast("❌ Excel okuma hatası: "+e.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 function setKasaTab(tab, btn){
   kasaCurrentTab = tab;
