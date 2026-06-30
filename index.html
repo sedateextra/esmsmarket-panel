@@ -382,16 +382,21 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="sub">Gelir - Bonus - Gider</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
       <div class="metric" style="position:relative">
-        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--warning)"></i>Komisyon</div>
-        <div class="val" id="db-komisyon" style="color:var(--warning)">₺0</div>
-        <div class="sub" id="db-komisyon-sub">Shopier kesintisi</div>
+        <div class="lbl"><i class="ti ti-users" style="color:var(--info)"></i>Bakiyeli üye</div>
+        <div class="val" id="db-active-members" style="color:var(--info)">0</div>
+        <div class="sub" id="db-today-new">Bugün yeni: 0</div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div>
         <div class="val" id="db-total-bonus" style="color:var(--warning)">₺0</div>
         <div class="sub" id="db-bonus-count">0 işlemde</div>
+      </div>
+      <div class="metric" style="position:relative">
+        <div class="lbl"><i class="ti ti-arrow-down-circle" style="color:var(--danger)"></i>Toplam gider</div>
+        <div class="val" id="db-total-expense" style="color:var(--danger)">₺0</div>
+        <div class="sub" id="db-komisyon-sub">Shopier komisyon dahil</div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--danger)"></i>Bekleyen borç</div>
@@ -524,7 +529,15 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
             <div class="modal-hdr"><h3 id="cm-title">Yeni üye</h3><button onclick="closeCustModal()"><i class="ti ti-x"></i></button></div>
             <div class="frow"><label>Kullanıcı adı</label><input type="text" id="cm-name" placeholder="kullanici_adi"></div>
             <div class="frow"><label>E-posta</label><input type="text" id="cm-email" placeholder="ornek@mail.com"></div>
-            <div class="frow"><label>Bakiye (₺)</label><input type="number" id="cm-balance" placeholder="0" min="0" step="0.01"></div>
+            <div class="frow"><label>Bakiye (₺)</label><input type="number" id="cm-balance" placeholder="0" min="0" step="0.01" oninput="updateCmMethod()"></div>
+            <div id="cm-method-wrap" class="frow" style="display:none">
+              <label>Ödeme yöntemi</label>
+              <select id="cm-method">
+                <option value="Havale">🏦 Havale/EFT</option>
+                <option value="Shopier">🤖 Shopier</option>
+                <option value="Kripto">₿ Kripto</option>
+              </select>
+            </div>
             <div class="btn-row">
               <button class="btn-save" onclick="saveCustomer()"><i class="ti ti-check" style="margin-right:4px"></i>Kaydet</button>
               <button class="btn-cancel" onclick="closeCustModal()">İptal</button>
@@ -627,11 +640,10 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
 
     <!-- ÖDEME YÖNTEMİ SEKMELERİ -->
-    <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px">
+    <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px;flex-wrap:wrap">
       <button id="ktab-all" onclick="setKasaTab('all',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;font-weight:600;background:var(--grad);color:#fff">Tümü</button>
       <button id="ktab-shopier" onclick="setKasaTab('shopier',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">🤖 Shopier</button>
       <button id="ktab-havale" onclick="setKasaTab('havale',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">🏦 Havale/EFT</button>
-      <button id="ktab-kart" onclick="setKasaTab('kart',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">💳 Kredi kartı</button>
       <button id="ktab-kripto" onclick="setKasaTab('kripto',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">₿ Kripto</button>
       <button id="ktab-gider" onclick="setKasaTab('gider',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📉 Giderler</button>
       <button id="ktab-shopier-col" onclick="setKasaTab('shopier-col',this)" style="flex:1;font-size:12px;padding:8px;border:none;border-radius:9px;cursor:pointer;color:var(--text2);background:transparent">📊 Shopier Tahsilatlar</button>
@@ -666,6 +678,24 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <button onclick="openExpense('Personel gideri')"><i class="ti ti-users"></i>Personel gideri ekle</button>
       <button onclick="exportKasaExcel()" style="margin-left:auto"><i class="ti ti-file-spreadsheet"></i>Kasa raporu indir</button>
       <button onclick="exportMonthlyReport()"><i class="ti ti-file-analytics"></i>Aylık özet raporu</button>
+      <button onclick="donemKapat('hafta')" style="border-color:rgba(245,158,11,.5);color:var(--warning)"><i class="ti ti-calendar-week"></i>Haftayı kapat</button>
+      <button onclick="donemKapat('ay')" style="border-color:rgba(239,68,68,.5);color:var(--danger)"><i class="ti ti-calendar-month"></i>Ayı kapat</button>
+    </div>
+
+    <!-- DÖNEM KAPATMA MODALI -->
+    <div class="overlay-wrap" id="donem-overlay" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-hdr"><h3 id="donem-modal-title">Dönem Kapat</h3><button onclick="document.getElementById('donem-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
+        <div id="donem-ozet" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+        <div style="padding:12px;border-radius:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);font-size:12px;color:var(--warning);margin-bottom:16px">
+          <i class="ti ti-info-circle" style="margin-right:6px"></i>Bu işlem sadece rapor oluşturur. Veriler silinmez.
+        </div>
+        <div class="btn-row">
+          <button class="btn-save" onclick="donemKapatOnayla(false)"><i class="ti ti-check" style="margin-right:4px"></i>Kapat</button>
+          <button class="btn-save" onclick="donemKapatOnayla(true)" style="background:linear-gradient(135deg,#229ED9,#1a7ab3)"><i class="ti ti-brand-telegram" style="margin-right:4px"></i>Kapat & Telegram'a gönder</button>
+          <button class="btn-cancel" onclick="document.getElementById('donem-overlay').style.display='none'">İptal</button>
+        </div>
+      </div>
     </div>
 
     <!-- EXPENSE MODAL -->
@@ -1513,6 +1543,12 @@ function openCustDetail(id){
 }
 document.getElementById("cust-detail-overlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open")});
 
+function updateCmMethod(){
+  const bal=parseFloat(document.getElementById("cm-balance").value)||0;
+  const wrap=document.getElementById("cm-method-wrap");
+  if(wrap) wrap.style.display=(!custEditId&&bal>0)?"block":"none";
+}
+
 function openCustomerModal(id){
   custEditId=id||null;
   if(id){
@@ -1521,9 +1557,13 @@ function openCustomerModal(id){
     document.getElementById("cm-name").value=c.name;
     document.getElementById("cm-email").value=c.email;
     document.getElementById("cm-balance").value=c.balance||0;
+    const wrap=document.getElementById("cm-method-wrap");
+    if(wrap) wrap.style.display="none";
   } else {
     document.getElementById("cm-title").textContent="Yeni üye";
     ["cm-name","cm-email","cm-balance"].forEach(i=>document.getElementById(i).value="");
+    const wrap=document.getElementById("cm-method-wrap");
+    if(wrap) wrap.style.display="none";
   }
   document.getElementById("cust-modal-overlay").classList.add("open");
 }
@@ -1534,12 +1574,23 @@ async function saveCustomer(){
   const name=document.getElementById("cm-name").value.trim();
   const email=document.getElementById("cm-email").value.trim();
   const balance=parseFloat(document.getElementById("cm-balance").value)||0;
+  const method=document.getElementById("cm-method")?.value||"Havale";
   if(!name||!email){alert("Ad ve e-posta zorunludur.");return;}
   showLoading(true);
   if(custEditId){
-    await db.from("customers").update({name,email,balance}).eq("id",custEditId);
     const c=customers.find(x=>x.id===custEditId);
+    const oldBal=c.balance||0;
+    await db.from("customers").update({name,email,balance}).eq("id",custEditId);
     Object.assign(c,{name,email,balance});
+    if(Math.abs(oldBal-balance)>0.001){
+      await db.from("balance_history").insert({
+        cust_id:custEditId, cust_name:name,
+        old_balance:oldBal, new_balance:balance,
+        change_amount:balance-oldBal,
+        reason:`Manuel bakiye düzenleme (${fmt(oldBal)} → ${fmt(balance)})`,
+        user_name:currentUser
+      });
+    }
     addLog("edit","Üye güncellendi",name);
   } else {
     const maxId=customers.reduce((m,c)=>{const n=parseInt((c.id||"#0").replace("#",""));return Math.max(m,n);},0);
@@ -1547,6 +1598,19 @@ async function saveCustomer(){
     const newC={id:newId,name,email,balance,since:todayStr(),notes:[]};
     await db.from("customers").insert(newC);
     customers.unshift(newC);
+    // Başlangıç bakiyesi varsa transaction ve balance_history ekle
+    if(balance>0){
+      const tx={cust_id:newId,cust_name:name,amount:balance,bonus:0,total:balance,type:method,note:"Açılış bakiyesi",date:todayStr(),user_name:currentUser,cancelled:false};
+      const {data:txData}=await db.from("transactions").insert(tx).select();
+      if(txData&&txData[0]) transactions.unshift(txData[0]);
+      await db.from("balance_history").insert({
+        cust_id:newId, cust_name:name,
+        old_balance:0, new_balance:balance,
+        change_amount:balance,
+        reason:`Açılış bakiyesi (${method})`,
+        user_name:currentUser
+      });
+    }
     addLog("add","Yeni üye eklendi",name);
     tgYeniUye(newC);
   }
@@ -2075,8 +2139,7 @@ function updateKasaMetrics(){
 
   if(tab==="all"){ filteredTx=active; filteredExp=expenses; tabTitle="Tüm kasa hareketleri"; }
   else if(tab==="shopier"){ filteredTx=active.filter(t=>t.user_name==="shopier-bot"); filteredExp=expenses.filter(e=>e.type==="Shopier Komisyon"); tabTitle="🤖 Shopier işlemleri"; }
-  else if(tab==="havale"){ filteredTx=active.filter(t=>t.type==="Havale"); tabTitle="🏦 Havale / EFT işlemleri"; }
-  else if(tab==="kart"){ filteredTx=active.filter(t=>t.type==="Kredi kartı"&&t.user_name!=="shopier-bot"); tabTitle="💳 Kredi kartı (manuel) işlemleri"; }
+  else if(tab==="havale"){ filteredTx=active.filter(t=>t.type==="Havale"||t.type==="Havale/EFT"); tabTitle="🏦 Havale / EFT işlemleri"; }
   else if(tab==="kripto"){ filteredTx=active.filter(t=>t.type==="Kripto"); tabTitle="₿ Kripto işlemleri"; }
   else if(tab==="gider"){ filteredExp=expenses; tabTitle="📉 Giderler"; }
 
@@ -2124,6 +2187,119 @@ function updateKasaMetrics(){
   document.getElementById("kasa-body").innerHTML=rows.join("");
 }
 
+
+// ============================================================
+// DÖNEM KAPATMA
+// ============================================================
+let donemKapatTip = null;
+
+function donemKapat(tip){
+  donemKapatTip = tip;
+  const now = new Date();
+  let baslangic, bitis, baslik;
+
+  if(tip==="hafta"){
+    bitis = new Date(now);
+    baslangic = new Date(now); baslangic.setDate(now.getDate()-6); baslangic.setHours(0,0,0,0);
+    bitis.setHours(23,59,59,999);
+    baslik = "📅 Haftayı Kapat";
+  } else {
+    baslangic = new Date(now.getFullYear(), now.getMonth(), 1);
+    bitis = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59, 999);
+    baslik = "📅 Ayı Kapat — "+now.toLocaleDateString("tr-TR",{month:"long",year:"numeric"});
+  }
+
+  const active = transactions.filter(t=>!t.cancelled);
+  const periodTx = active.filter(t=>{
+    if(!t.created_at) return false;
+    const d=new Date(t.created_at);
+    return d>=baslangic&&d<=bitis;
+  });
+  const periodExp = expenses.filter(e=>{
+    if(!e.created_at) return false;
+    const d=new Date(e.created_at);
+    return d>=baslangic&&d<=bitis;
+  });
+
+  const gelir = periodTx.reduce((s,t)=>s+t.amount,0);
+  const bonus = periodTx.reduce((s,t)=>s+t.bonus,0);
+  const gider = periodExp.reduce((s,e)=>s+e.amount,0);
+  const net = gelir - bonus - gider;
+  const shopierGelir = periodTx.filter(t=>t.user_name==="shopier-bot").reduce((s,t)=>s+t.amount,0);
+  const havaleGelir = periodTx.filter(t=>t.type==="Havale"||t.type==="Havale/EFT").reduce((s,t)=>s+t.amount,0);
+  const kriptoGelir = periodTx.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
+
+  document.getElementById("donem-modal-title").textContent = baslik;
+  const fmtDate = d=>d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+  document.getElementById("donem-ozet").innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${fmtDate(baslangic)} — ${fmtDate(bitis)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--card2);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--text2)">Toplam gelir</div>
+        <div style="font-size:16px;font-weight:700;color:var(--success)">${fmt(gelir)}</div>
+        <div style="font-size:10px;color:var(--text3)">${periodTx.length} işlem</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--text2)">Net kasa</div>
+        <div style="font-size:16px;font-weight:700;color:${net>=0?"var(--success)":"var(--danger)"}">${fmt(net)}</div>
+        <div style="font-size:10px;color:var(--text3)">Gelir - Bonus - Gider</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--text2)">Bonus</div>
+        <div style="font-size:14px;font-weight:700;color:var(--warning)">${fmt(bonus)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--text2)">Gider</div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger)">${fmt(gider)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--text2)">🤖 Shopier</div>
+        <div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(shopierGelir)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--text2)">🏦 Havale/EFT</div>
+        <div style="font-size:13px;font-weight:700;color:var(--info)">${fmt(havaleGelir)}</div>
+      </div>
+    </div>`;
+
+  document.getElementById("donem-overlay").style.display = "flex";
+  // Geçici veriler sakla
+  window._donemData = { tip, baslangic, bitis, gelir, bonus, gider, net, shopierGelir, havaleGelir, kriptoGelir, txCount:periodTx.length };
+}
+
+async function donemKapatOnayla(withTelegram){
+  document.getElementById("donem-overlay").style.display="none";
+  const d = window._donemData;
+  if(!d) return;
+  const now = new Date();
+  const fmtDate = dt=>dt.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const label = d.tip==="hafta" ? "Haftalık" : now.toLocaleDateString("tr-TR",{month:"long",year:"numeric"});
+  addLog("add",`${label} dönem kapatıldı — Net: ${fmt(d.net)}`,"Kasa");
+  if(withTelegram){
+    const emoji = d.tip==="hafta"?"📅":"📆";
+    const msg = `${emoji} <b>ESMSMarket ${label} Dönem Kapanışı</b>
+📅 ${fmtDate(d.baslangic)} — ${fmtDate(d.bitis)}
+━━━━━━━━━━━━━━━━━━
+💰 Toplam gelir: <b>${fmt(d.gelir)}</b>
+🎁 Toplam bonus: <b>${fmt(d.bonus)}</b>
+📉 Toplam gider: <b>${fmt(d.gider)}</b>
+━━━━━━━━━━━━━━━━━━
+🤖 Shopier: <b>${fmt(d.shopierGelir)}</b>
+🏦 Havale/EFT: <b>${fmt(d.havaleGelir)}</b>
+₿ Kripto: <b>${fmt(d.kriptoGelir)}</b>
+━━━━━━━━━━━━━━━━━━
+📊 İşlem sayısı: <b>${d.txCount}</b>
+💎 Net kasa: <b>${fmt(d.net)}</b>
+━━━━━━━━━━━━━━━━━━
+⏰ Kapanış: ${now.toLocaleDateString("tr-TR")} ${now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})}
+👤 İşlemci: ${currentUser}`;
+    await sendTelegram(msg);
+    showToast("✅ Dönem kapatıldı ve Telegram'a gönderildi!");
+  } else {
+    showToast("✅ Dönem kapatıldı!");
+  }
+  window._donemData = null;
+}
 
 function renderExpenseDist(total){
   const cats={};expenses.forEach(e=>{if(!cats[e.type])cats[e.type]=0;cats[e.type]+=e.amount;});
@@ -2767,8 +2943,8 @@ async function renderDashboard(){
   document.getElementById("db-total-expense").textContent = fmt(totalExpense2);
   document.getElementById("db-total-bonus").textContent = fmt(totalBonus2);
   document.getElementById("db-bonus-count").textContent = activeTx.filter(t=>t.bonus>0).length+" işlemde";
-  document.getElementById("db-net-kasa").textContent = fmt(netKasa);
-  document.getElementById("db-net-kasa").style.color = netKasa>=0?"var(--success)":"var(--danger)";
+  const dbNetEl = document.getElementById("db-net-kasa");
+  if(dbNetEl){ dbNetEl.textContent = fmt(netKasa); dbNetEl.style.color = netKasa>=0?"var(--success)":"var(--danger)"; }
 
   // Son import
   const lastImportLog = logs.find(l=>l.action==="import");
@@ -2921,6 +3097,19 @@ function closeConfirm(result){
 document.getElementById("confirm-overlay").addEventListener("click", function(e){
   if(e.target===this) closeConfirm(false);
 });
+
+function showToast(msg, duration=3000){
+  let t=document.getElementById("esms-toast");
+  if(!t){
+    t=document.createElement("div");
+    t.id="esms-toast";
+    t.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;color:var(--text);z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:opacity .3s;pointer-events:none";
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.opacity="1";
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{t.style.opacity="0";},duration);
+}
 
 // ============================================================
 // TEMA
