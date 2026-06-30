@@ -725,6 +725,34 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
       <div id="no-kasa" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz kayıt yok.</div>
     </div>
+
+    <!-- SHOPİER TAHSİLATLAR (page-kasa içinde, sekme ile göster/gizle) -->
+    <div id="shopier-collections-wrap" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-left"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier Tahsilat Geçmişi</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="shopier-col-count" class="tbadge">0 kayıt</span>
+            <label class="btn-sm" style="cursor:pointer;font-size:11px;border-color:var(--success);color:var(--success);display:flex;align-items:center;gap:4px">
+              <i class="ti ti-upload"></i>Excel Yükle
+              <input type="file" id="shopier-excel-input" accept=".xlsx,.csv" style="display:none" onchange="importShopierExcel(this)">
+            </label>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
+          <div class="metric"><div class="lbl"><i class="ti ti-cash" style="color:var(--success)"></i>Toplam satış</div><div class="val" id="sc-total-sales" style="color:var(--success)">₺0</div></div>
+          <div class="metric"><div class="lbl"><i class="ti ti-percent" style="color:var(--danger)"></i>Toplam komisyon</div><div class="val" id="sc-total-fee" style="color:var(--danger)">₺0</div></div>
+          <div class="metric"><div class="lbl"><i class="ti ti-wallet" style="color:var(--purple)"></i>Net tahsilat</div><div class="val" id="sc-net" style="color:var(--purple)">₺0</div></div>
+          <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--warning)"></i>Eşleşen üye</div><div class="val" id="sc-matched" style="color:var(--warning)">0/0</div></div>
+        </div>
+        <table>
+          <colgroup><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:15%"><col style="width:12%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
+          <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th><th>Plan. Ödeme</th></tr></thead>
+          <tbody id="shopier-col-body"></tbody>
+        </table>
+        <div id="no-shopier-col" style="text-align:center;padding:2rem;font-size:12px;color:var(--text3)">Henüz tahsilat verisi yok. Excel dosyasını yükleyin.</div>
+      </div>
+    </div>
   </div>
 
   <!-- BONUS KURALLARI -->
@@ -784,34 +812,6 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
   </div>
 
 
-
-  <!-- SHOPİER TAHSİLATLAR -->
-  <div id="shopier-collections-wrap" style="display:none;padding:0 1rem 1rem">
-    <div class="card" style="margin-top:0">
-      <div class="card-title">
-        <div class="card-title-left"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier Tahsilat Geçmişi</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span id="shopier-col-count" class="tbadge">0 kayıt</span>
-          <label class="btn-sm" style="cursor:pointer;font-size:11px;border-color:var(--success);color:var(--success);display:flex;align-items:center;gap:4px">
-            <i class="ti ti-upload"></i>Excel Yükle
-            <input type="file" id="shopier-excel-input" accept=".xlsx,.csv" style="display:none" onchange="importShopierExcel(this)">
-          </label>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
-        <div class="metric"><div class="lbl"><i class="ti ti-cash" style="color:var(--success)"></i>Toplam satış</div><div class="val" id="sc-total-sales" style="color:var(--success)">₺0</div></div>
-        <div class="metric"><div class="lbl"><i class="ti ti-percent" style="color:var(--danger)"></i>Toplam komisyon</div><div class="val" id="sc-total-fee" style="color:var(--danger)">₺0</div></div>
-        <div class="metric"><div class="lbl"><i class="ti ti-wallet" style="color:var(--purple)"></i>Net tahsilat</div><div class="val" id="sc-net" style="color:var(--purple)">₺0</div></div>
-        <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--warning)"></i>Eşleşen üye</div><div class="val" id="sc-matched" style="color:var(--warning)">0/0</div></div>
-      </div>
-      <table>
-        <colgroup><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:15%"><col style="width:12%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
-        <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th><th>Plan. Ödeme</th></tr></thead>
-        <tbody id="shopier-col-body"></tbody>
-      </table>
-      <div id="no-shopier-col" style="text-align:center;padding:2rem;font-size:12px;color:var(--text3)">Henüz tahsilat verisi yok. Excel dosyasını yükleyin.</div>
-    </div>
-  </div>
 
   <!-- BORÇLULAR -->
   <div id="page-borclu" class="page">
@@ -2168,7 +2168,26 @@ function setKasaTab(tab, btn){
     b.style.background="transparent"; b.style.color="var(--text2)";
   });
   btn.style.background="var(--grad)"; btn.style.color="#fff";
-  updateKasaMetrics();
+
+  const colWrap = document.getElementById("shopier-collections-wrap");
+  const kasaMetrics = document.getElementById("kasa-tab-metrics");
+  const kasaCharts = document.querySelector("#page-kasa .card:has(#trend-chart)")?.parentElement;
+  const kasaActionBar = document.querySelector("#page-kasa .action-bar");
+  const kasaTableCard = document.querySelector("#page-kasa .card:has(#kasa-body)");
+
+  if(tab === "shopier-col"){
+    // Shopier Tahsilatlar: sadece tahsilat panelini göster
+    if(colWrap) colWrap.style.display = "block";
+    if(kasaMetrics) kasaMetrics.style.display = "none";
+    if(kasaTableCard) kasaTableCard.style.display = "none";
+    loadShopierCollections();
+  } else {
+    // Diğer sekmeler: normal kasa görünümü
+    if(colWrap) colWrap.style.display = "none";
+    if(kasaMetrics) kasaMetrics.style.display = "grid";
+    if(kasaTableCard) kasaTableCard.style.display = "block";
+    updateKasaMetrics();
+  }
 }
 
 function updateKasaMetrics(){
