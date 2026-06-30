@@ -746,8 +746,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--warning)"></i>Eşleşen üye</div><div class="val" id="sc-matched" style="color:var(--warning)">0/0</div></div>
         </div>
         <table>
-          <colgroup><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:15%"><col style="width:12%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
-          <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th><th>Plan. Ödeme</th></tr></thead>
+          <colgroup><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:17%"><col style="width:14%"><col style="width:13%"><col style="width:11%"><col style="width:10%"></colgroup>
+          <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th></tr></thead>
           <tbody id="shopier-col-body"></tbody>
         </table>
         <div id="no-shopier-col" style="text-align:center;padding:2rem;font-size:12px;color:var(--text3)">Henüz tahsilat verisi yok. Excel dosyasını yükleyin.</div>
@@ -2010,7 +2010,6 @@ async function loadShopierCollections(){
       <td style="font-size:12px;font-weight:600;color:var(--success)">${fmt(r.sales_price||0)}</td>
       <td style="font-size:11px;color:var(--danger)">-${fmt((r.service_fee||0)+(r.vat||0))}</td>
       <td style="font-size:12px;font-weight:700;color:var(--purple)">${fmt(r.collection||0)}</td>
-      <td style="font-size:10px;color:var(--text3)">${r.planned_date||"—"}</td>
     </tr>`).join("");
 }
 
@@ -2070,19 +2069,21 @@ async function importShopierExcel(input){
       const header = rows[headerRowIdx].map(h=>String(h||""));
       const getIdx = (needle) => header.findIndex(h=>h.includes(needle));
 
-      // Kolon indeksleri — Excel formatına göre:
-      // Sipariş No | Sipariş Oluşma Tarihi | Sipariş Ödeme Tarihi |
-      // Müşteri Adı | Müşteri E-posta | Satış Fiyatı | Hizmet Bedeli | KDV | Net | Planlanan Ödeme Tarihi
+      // Kolon indeksleri — Shopier'in her iki export formatını destekler:
+      // Format A (kısa): Sipariş No | Sipariş Oluşma Tarihi | Sipariş Ödeme Tarihi |
+      //   Müşteri Adı | Müşteri E-posta | Satış Fiyatı | Hizmet Bedeli | KDV | Net | Planlanan Ödeme Tarihi
+      // Format B (tam):  + Müşteri Telefon | Adres | İlçe | İl | Ülke | Döviz Kuru | TL Karşılık |
+      //   Hizmet Bedeli | KDV | Stopaj | Tahsilat | Planlanan Ödeme Tarihi | Kargo | Durum | Ürün Adı ...
       const idx = {
         orderId    : getIdx("Sipariş No"),
         orderDate  : getIdx("Sipariş Oluşma"),
-        payDate    : getIdx("Sipariş Ödeme Tarihi"),
+        payDate    : getIdx("Sipariş Ödeme"),
         name       : getIdx("Müşteri Adı"),
         email      : getIdx("Müşteri E-posta"),
         sales      : getIdx("Satış Fiyatı"),
         fee        : getIdx("Hizmet Bedeli"),
         vat        : getIdx("KDV"),
-        net        : getIdx("Net"),
+        net        : getIdx("Tahsilat"),
         planDate   : getIdx("Planlanan Ödeme"),
       };
 
@@ -2132,7 +2133,7 @@ async function importShopierExcel(input){
           service_fee   : serviceFee,
           vat           : vat,
           collection    : collection,
-          planned_date  : idx.planDate !== -1 ? String(r[idx.planDate]||"").trim() : "",
+
           cust_id       : cust?.id   || null,
           cust_name     : cust?.name || null,
         };
