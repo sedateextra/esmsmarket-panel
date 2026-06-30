@@ -805,8 +805,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--warning)"></i>Eşleşen üye</div><div class="val" id="sc-matched" style="color:var(--warning)">0/0</div></div>
       </div>
       <table>
-        <colgroup><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:16%"><col style="width:14%"><col style="width:13%"><col style="width:12%"><col style="width:13%"></colgroup>
-        <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Komisyon</th><th>Tahsilat</th></tr></thead>
+        <colgroup><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:15%"><col style="width:12%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
+        <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th><th>Plan. Ödeme</th></tr></thead>
         <tbody id="shopier-col-body"></tbody>
       </table>
       <div id="no-shopier-col" style="text-align:center;padding:2rem;font-size:12px;color:var(--text3)">Henüz tahsilat verisi yok. Excel dosyasını yükleyin.</div>
@@ -2010,83 +2010,153 @@ async function loadShopierCollections(){
       <td style="font-size:12px;font-weight:600;color:var(--success)">${fmt(r.sales_price||0)}</td>
       <td style="font-size:11px;color:var(--danger)">-${fmt((r.service_fee||0)+(r.vat||0))}</td>
       <td style="font-size:12px;font-weight:700;color:var(--purple)">${fmt(r.collection||0)}</td>
+      <td style="font-size:10px;color:var(--text3)">${r.planned_date||"—"}</td>
     </tr>`).join("");
+}
+
+// Shopier Excel'inden TL tutarını parse et
+// Örnekler: "103,09 TL" → 103.09  |  "1.030,83 TL" → 1030.83  |  "31,37" → 31.37
+function parseShopierAmount(raw){
+  const s = String(raw||"").trim()
+    .replace(/\s*TL\s*$/i,"")   // "TL" suffix'ini kaldır
+    .replace(/\./g,"")           // binlik nokta ayracını kaldır
+    .replace(",",".");           // ondalık virgülü noktaya çevir
+  return parseFloat(s)||0;
+}
+
+// Müşteri adından " User" suffix'ini temizle (Shopier formatı: "defne User")
+function cleanShopierName(raw){
+  return String(raw||"").replace(/\s+User\s*$/i,"").trim();
+}
+
+// Üye eşleştirme: önce tam eşleşme, sonra kısmi
+function matchCustomer(nameRaw, emailRaw, custMap, emailMap){
+  const nameLow = nameRaw.toLowerCase();
+  const emailLow = emailRaw.toLowerCase().trim();
+  // 1) Email ile tam eşleşme
+  if(emailMap[emailLow]) return emailMap[emailLow];
+  // 2) İsim ile tam eşleşme
+  if(custMap[nameLow]) return custMap[nameLow];
+  // 3) İsim kısmi eşleşme
+  const keys = Object.keys(custMap);
+  const found = keys.find(k => k.includes(nameLow) || nameLow.includes(k));
+  if(found) return custMap[found];
+  return null;
 }
 
 async function importShopierExcel(input){
   const file = input.files[0];
   if(!file) return;
   const btn = input.previousElementSibling;
-  btn.textContent = "Yükleniyor...";
+  const origLabel = btn.innerHTML;
+  btn.innerHTML = "<i class='ti ti-loader'></i> Yükleniyor...";
 
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
       const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, {type:"array"});
+      const wb = XLSX.read(data, {type:"array", cellText:true, cellDates:false});
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
 
-      // Header row bul
-      const header = rows[0];
-      const getIdx = (name) => header.findIndex(h=>String(h||"").includes(name));
+      // raw: true → hücre değerlerini ham al (formatlı string için cellText kullanıyoruz)
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:""});
+      if(!rows.length){ showToast("❌ Excel boş."); btn.innerHTML=origLabel; return; }
 
-      const idxOrderId = getIdx("Sipariş No");
-      const idxOrderDate = getIdx("Sipariş Oluşma");
-      const idxPayDate = getIdx("Sipariş Ödeme");
-      const idxName = getIdx("Müşteri Adı");
-      const idxEmail = getIdx("Müşteri E-posta");
-      const idxSales = getIdx("Satış Fiyatı");
-      const idxFee = getIdx("Hizmet Bedeli");
-      const idxVat = getIdx("KDV");
-      const idxCol = getIdx("Tahsilat");
+      // Header satırını bul (ilk satır başlık değilse ilk 5 satırda ara)
+      let headerRowIdx = 0;
+      for(let i=0;i<Math.min(5,rows.length);i++){
+        if(rows[i].some(c=>String(c).includes("Sipariş No"))){ headerRowIdx=i; break; }
+      }
+      const header = rows[headerRowIdx].map(h=>String(h||""));
+      const getIdx = (needle) => header.findIndex(h=>h.includes(needle));
 
-      const dataRows = rows.slice(1).filter(r=>r[idxOrderId]);
+      // Kolon indeksleri — Excel formatına göre:
+      // Sipariş No | Sipariş Oluşma Tarihi | Sipariş Ödeme Tarihi |
+      // Müşteri Adı | Müşteri E-posta | Satış Fiyatı | Hizmet Bedeli | KDV | Net | Planlanan Ödeme Tarihi
+      const idx = {
+        orderId    : getIdx("Sipariş No"),
+        orderDate  : getIdx("Sipariş Oluşma"),
+        payDate    : getIdx("Sipariş Ödeme Tarihi"),
+        name       : getIdx("Müşteri Adı"),
+        email      : getIdx("Müşteri E-posta"),
+        sales      : getIdx("Satış Fiyatı"),
+        fee        : getIdx("Hizmet Bedeli"),
+        vat        : getIdx("KDV"),
+        net        : getIdx("Net"),
+        planDate   : getIdx("Planlanan Ödeme"),
+      };
 
-      // Üyelerle eşleştir
-      const custMap = {};
-      customers.forEach(c=>{ custMap[c.name.toLowerCase().trim()] = c; });
+      // Doğrulama: en az sipariş no ve satış fiyatı bulunmalı
+      if(idx.orderId === -1 || idx.sales === -1){
+        showToast("❌ Excel formatı tanınamadı. 'Sipariş No' ve 'Satış Fiyatı' kolonları bulunamadı.");
+        btn.innerHTML=origLabel; return;
+      }
 
+      const dataRows = rows.slice(headerRowIdx+1).filter(r=>String(r[idx.orderId]||"").trim());
+
+      if(!dataRows.length){
+        showToast("❌ Hiç veri satırı bulunamadı.");
+        btn.innerHTML=origLabel; return;
+      }
+
+      // Üye eşleştirme haritaları
+      const custMap  = {};  // isim → müşteri
+      const emailMap = {};  // email → müşteri
+      customers.forEach(c=>{
+        custMap[c.name.toLowerCase().trim()] = c;
+        if(c.email) emailMap[c.email.toLowerCase().trim()] = c;
+      });
+
+      let matched = 0;
       const records = dataRows.map(r=>{
-        const custNameRaw = String(r[idxName]||"").trim();
-        const custNameLow = custNameRaw.toLowerCase();
-        // Direkt eşleştirme veya kısmi eşleştirme
-        let matchedCust = custMap[custNameLow];
-        if(!matchedCust){
-          const keys = Object.keys(custMap);
-          const found = keys.find(k=>k.includes(custNameLow)||custNameLow.includes(k));
-          if(found) matchedCust = custMap[found];
-        }
+        const nameRaw  = cleanShopierName(r[idx.name]);
+        const emailRaw = String(r[idx.email]||"").trim();
+        const cust     = matchCustomer(nameRaw, emailRaw, custMap, emailMap);
+        if(cust) matched++;
+
+        const salesPrice = parseShopierAmount(r[idx.sales]);
+        const serviceFee = parseShopierAmount(r[idx.fee]);
+        const vat        = parseShopierAmount(r[idx.vat]);
+        // Net kolonu varsa kullan, yoksa hesapla
+        const collection = idx.net !== -1
+          ? parseShopierAmount(r[idx.net])
+          : salesPrice - serviceFee - vat;
+
         return {
-          order_id: String(r[idxOrderId]||""),
-          order_date: String(r[idxOrderDate]||""),
-          payment_date: String(r[idxPayDate]||""),
-          customer_name: custNameRaw,
-          customer_email: String(r[idxEmail]||""),
-          sales_price: parseFloat(String(r[idxSales]||"0").replace(",","."))||0,
-          service_fee: parseFloat(String(r[idxFee]||"0").replace(",","."))||0,
-          vat: parseFloat(String(r[idxVat]||"0").replace(",","."))||0,
-          collection: parseFloat(String(r[idxCol]||"0").replace(",","."))||0,
-          cust_id: matchedCust?.id||null,
-          cust_name: matchedCust?.name||null,
+          order_id      : String(r[idx.orderId]||"").trim(),
+          order_date    : String(r[idx.orderDate]||"").trim(),
+          payment_date  : String(r[idx.payDate]||"").trim(),
+          customer_name : nameRaw,
+          customer_email: emailRaw,
+          sales_price   : salesPrice,
+          service_fee   : serviceFee,
+          vat           : vat,
+          collection    : collection,
+          planned_date  : idx.planDate !== -1 ? String(r[idx.planDate]||"").trim() : "",
+          cust_id       : cust?.id   || null,
+          cust_name     : cust?.name || null,
         };
       });
 
-      // Supabase'e kaydet (upsert by order_id)
+      // Supabase'e kaydet — 100'lük chunk'lar halinde upsert
       const chunks = [];
       for(let i=0;i<records.length;i+=100) chunks.push(records.slice(i,i+100));
       for(const chunk of chunks){
-        await db.from("shopier_collections").upsert(chunk, {onConflict:"order_id", ignoreDuplicates:false});
+        const {error} = await db.from("shopier_collections")
+          .upsert(chunk, {onConflict:"order_id", ignoreDuplicates:false});
+        if(error) throw error;
       }
 
       await loadShopierCollections();
-      btn.innerHTML = "<i class='ti ti-upload'></i>Excel Yükle";
+      btn.innerHTML = origLabel;
       input.value = "";
-      showToast(`✅ ${records.length} tahsilat yüklendi! ${records.filter(r=>r.cust_id).length} üye eşleşti.`);
-    } catch(e){
-      console.error("Excel import error:", e);
-      btn.innerHTML = "<i class='ti ti-upload'></i>Excel Yükle";
-      showToast("❌ Excel okuma hatası: "+e.message);
+      addLog("import", `Shopier Excel yüklendi — ${records.length} kayıt, ${matched} eşleşme`, file.name);
+      showToast(`✅ ${records.length} tahsilat yüklendi! ${matched}/${records.length} üye eşleşti.`);
+    } catch(err){
+      console.error("Shopier Excel import hatası:", err);
+      btn.innerHTML = origLabel;
+      input.value = "";
+      showToast("❌ Excel okuma hatası: " + (err.message||err));
     }
   };
   reader.readAsArrayBuffer(file);
