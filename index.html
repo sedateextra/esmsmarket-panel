@@ -717,6 +717,20 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="card-title-left"><i class="ti ti-list"></i><span id="kasa-table-title">Tüm kasa hareketleri</span></div>
         <span id="kasa-table-count" class="tbadge">0 kayıt</span>
       </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input type="text" id="kasa-search" placeholder="Üye veya not ara..." oninput="updateKasaMetrics()" style="flex:1;min-width:140px;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+        <select id="kasa-filter-type" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+          <option value="">Tüm türler</option>
+          <option value="Havale">Havale/EFT</option>
+          <option value="Shopier">Shopier</option>
+          <option value="Kripto">Kripto</option>
+          <option value="gider">Giderler</option>
+          <option value="tahsilat">Shopier Tahsilat</option>
+        </select>
+        <input type="date" id="kasa-filter-from" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+        <input type="date" id="kasa-filter-to" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+        <button onclick="clearKasaFilters()" style="font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer"><i class="ti ti-x"></i></button>
+      </div>
       <div id="kasa-table-wrap">
         <table><colgroup><col style="width:16%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:25%"></colgroup>
           <thead><tr><th>Üye / Açıklama</th><th>Tür</th><th>Tutar</th><th>Bonus</th><th>Kaynak</th><th>Tarih</th><th>Not</th></tr></thead>
@@ -2007,11 +2021,19 @@ function renderTop10(){
   const rankClass=i=>i===0?"rank-1":i===1?"rank-2":i===2?"rank-3":"rank-other";
   const top10bal=[...customers].sort((a,b)=>(b.balance||0)-(a.balance||0)).slice(0,10);
   document.getElementById("top10-balance").innerHTML=top10bal.map((c,i)=>`<div class="top10-row"><div class="top10-rank ${rankClass(i)}">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.id}</div></div><div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(c.balance)}</div></div>`).join("");
+
   const txTotals={};
+  // Transactions
   transactions.filter(t=>!t.cancelled).forEach(t=>{
     if(!txTotals[t.cust_id])txTotals[t.cust_id]={name:t.cust_name,total:0,count:0};
     txTotals[t.cust_id].total+=t.amount;txTotals[t.cust_id].count++;
   });
+  // Shopier tahsilatları da ekle (cust_id varsa)
+  (shopierCollections||[]).filter(r=>r.cust_id).forEach(r=>{
+    if(!txTotals[r.cust_id])txTotals[r.cust_id]={name:r.cust_name||r.customer_name||"—",total:0,count:0};
+    txTotals[r.cust_id].total+=(r.collection||0);txTotals[r.cust_id].count++;
+  });
+
   const top10tx=Object.values(txTotals).sort((a,b)=>b.total-a.total).slice(0,10);
   document.getElementById("top10-tx").innerHTML=top10tx.length?top10tx.map((c,i)=>`<div class="top10-row"><div class="top10-rank ${rankClass(i)}">${i+1}</div><div style="flex:1"><div style="font-size:12px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.count} işlem</div></div><div style="font-size:13px;font-weight:700;color:var(--purple)">${fmt(c.total)}</div></div>`).join(""):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">Henüz işlem yok.</div>';
   const now2=new Date();const weekAgo=new Date(now2);weekAgo.setDate(now2.getDate()-7);
@@ -2394,23 +2416,51 @@ function updateKasaMetrics(){
     ?"<span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span>"
     :"<span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3)'>👤 Manuel</span>";
 
+  const q = (document.getElementById("kasa-search")?.value||"").toLowerCase().trim();
+  const filterType = document.getElementById("kasa-filter-type")?.value||"";
+  const filterFrom = document.getElementById("kasa-filter-from")?.value||"";
+  const filterTo   = document.getElementById("kasa-filter-to")?.value||"";
+
+  const inDateRange = (dateStr) => {
+    if(!filterFrom&&!filterTo) return true;
+    if(!dateStr) return false;
+    // created_at ISO veya DD.MM.YYYY formatı
+    let d;
+    if(dateStr.includes("T")||dateStr.includes("-")) d=new Date(dateStr);
+    else { const p=dateStr.split("."); d=new Date(p[2],p[1]-1,p[0]); }
+    if(filterFrom && d<new Date(filterFrom)) return false;
+    if(filterTo   && d>new Date(filterTo+"T23:59:59")) return false;
+    return true;
+  };
+
   let rows=[];
   if(tab!=="gider"){
-    rows=filteredTx.map(t=>"<tr><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+t.date+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td></tr>");
+    let txRows = filteredTx;
+    if(q) txRows=txRows.filter(t=>(t.cust_name||"").toLowerCase().includes(q)||(t.note||"").toLowerCase().includes(q));
+    if(filterType&&filterType!=="gider"&&filterType!=="tahsilat") txRows=txRows.filter(t=>t.type===filterType||(filterType==="Shopier"&&t.user_name==="shopier-bot"));
+    if(filterType==="gider"||filterType==="tahsilat") txRows=[];
+    if(filterFrom||filterTo) txRows=txRows.filter(t=>inDateRange(t.created_at||t.date));
+    rows=txRows.map(t=>"<tr><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+t.date+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td></tr>");
   }
   if(tab==="all"||tab==="gider"||tab==="shopier"){
-    rows=rows.concat(filteredExp.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+e.date+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td></tr>"));
+    let expRows=filteredExp;
+    if(q) expRows=expRows.filter(e=>(e.note||"").toLowerCase().includes(q)||(e.type||"").toLowerCase().includes(q));
+    if(filterType&&filterType!=="gider"&&filterType!=="tahsilat") expRows=[];
+    if(filterFrom||filterTo) expRows=expRows.filter(e=>inDateRange(e.created_at||e.date));
+    rows=rows.concat(expRows.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+e.date+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td></tr>"));
   }
-  // shopier_collections verilerini all ve shopier sekmelerine ekle
-  if((tab==="all"||tab==="shopier") && shopierCollections && shopierCollections.length){
-    const colRows = shopierCollections.map(r=>{
+  // shopier_collections verilerini SADECE all sekmesine ekle
+  if(tab==="all" && (!filterType||filterType==="tahsilat") && shopierCollections && shopierCollections.length){
+    let scFiltered = shopierCollections;
+    if(q) scFiltered=scFiltered.filter(r=>(r.cust_name||r.customer_name||"").toLowerCase().includes(q));
+    if(filterFrom||filterTo) scFiltered=scFiltered.filter(r=>inDateRange(r.payment_date||r.order_date));
+    const colRows = scFiltered.map(r=>{
       const tarih = (r.payment_date||r.order_date||"—").substring(0,10);
       const musteri = r.cust_name || r.customer_name || "—";
       return "<tr style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td style='color:var(--text3)'>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarih+"</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
     });
     rows=rows.concat(colRows);
-  } else if((tab==="all"||tab==="shopier") && (!shopierCollections||!shopierCollections.length)){
-    // Henüz yüklenmemişse yükle ve tekrar render et
+  } else if(tab==="all" && (!shopierCollections||!shopierCollections.length)){
     db.from("shopier_collections").select("*").order("payment_date",{ascending:false}).then(({data})=>{
       if(data&&data.length){ shopierCollections=data; updateKasaMetrics(); }
     });
@@ -2420,6 +2470,12 @@ function updateKasaMetrics(){
   if(document.getElementById("kasa-table-count")) document.getElementById("kasa-table-count").textContent=kasa_total+" kayıt";
   document.getElementById("no-kasa").style.display=kasa_total?"none":"block";
   document.getElementById("kasa-body").innerHTML=rows.join("");
+}
+
+function clearKasaFilters(){
+  ["kasa-search","kasa-filter-from","kasa-filter-to"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  const sel=document.getElementById("kasa-filter-type");if(sel)sel.value="";
+  updateKasaMetrics();
 }
 
 
@@ -3172,19 +3228,27 @@ async function renderDashboard(){
 
   // Aktif işlemler
   const activeTx = transactions.filter(t=>!t.cancelled);
+  // Shopier tahsilatları da dahil et
+  const scTx = (shopierCollections||[]).map(r=>({
+    amount: r.collection||0, bonus:0, type:"Shopier",
+    cust_name: r.cust_name||r.customer_name||"—",
+    user_name:"shopier-bot", date:(r.payment_date||r.order_date||"").substring(0,10),
+    created_at: r.payment_date||r.order_date||null, note: r.order_id||""
+  }));
+  const allTx = [...activeTx, ...scTx];
 
   // Bugünkü gelir
-  const todayIncome = activeTx.filter(t=>t.date&&t.date.startsWith(today.toLocaleDateString("tr-TR",{day:"numeric",month:"short",year:"numeric"}).split(" ")[0])).reduce((s,t)=>s+t.amount,0);
+  const todayIncome = allTx.filter(t=>t.date&&t.date.startsWith(today.toLocaleDateString("tr-TR",{day:"numeric",month:"short",year:"numeric"}).split(" ")[0])).reduce((s,t)=>s+t.amount,0);
 
   // Bu ayki gelir
-  const monthIncome = activeTx.filter(t=>{
+  const monthIncome = allTx.filter(t=>{
     if(!t.created_at) return false;
     const d = new Date(t.created_at);
     return d >= monthStart;
   }).reduce((s,t)=>s+t.amount,0);
 
   // Toplam gelir/gider/bonus
-  const totalIncome = activeTx.reduce((s,t)=>s+t.amount,0);
+  const totalIncome = allTx.reduce((s,t)=>s+t.amount,0);
   const totalBonus2 = activeTx.reduce((s,t)=>s+t.bonus,0);
   const totalExpense2 = expenses.reduce((s,e)=>s+e.amount,0);
   const netKasa = totalIncome - totalBonus2 - totalExpense2;
@@ -3235,8 +3299,8 @@ async function renderDashboard(){
       <div style="font-size:12px;font-weight:700;color:var(--success)">${fmt(c.total)}</div>
     </div>`).join("") : '<div style="font-size:12px;color:var(--text3)">Bu ay işlem yok.</div>';
 
-  // Canlı akış
-  const feed = activeTx.slice(0,5);
+  // Son işlemler — transactions + tahsilatlar birleşik, tarihe göre sıralı
+  const feed = [...allTx].sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||"")).slice(0,5);
   const icClass=t=>t.type==="Havale"?"ic-bank":t.type==="Kripto"?"ic-crypto":"ic-card";
   const typeEmojis={"Havale":"🏦","Shopier":"🤖","Kripto":"₿"};
   const typeGradients={"Havale":"linear-gradient(135deg,#3b82f6,#1d4ed8)","Shopier":"linear-gradient(135deg,#10b981,#047857)","Kripto":"linear-gradient(135deg,#f59e0b,#d97706)"};
@@ -3283,7 +3347,7 @@ async function renderDashboard(){
   for(let i=29;i>=0;i--){
     const d=new Date(today);d.setDate(d.getDate()-i);
     labels30.push(d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit"}));
-    const dayIncome=activeTx.filter(t=>{
+    const dayIncome=allTx.filter(t=>{
       if(!t.created_at)return false;
       const td=new Date(t.created_at);
       return td.toDateString()===d.toDateString();
@@ -3296,18 +3360,17 @@ async function renderDashboard(){
 
   // Pasta grafik
   const typeCount={"Havale":0,"Shopier":0,"Kripto":0};
-  activeTx.forEach(t=>{if(typeCount[t.type]!==undefined)typeCount[t.type]++;});
+  allTx.forEach(t=>{if(typeCount[t.type]!==undefined)typeCount[t.type]++;});
   const pieCtx=document.getElementById("db-pie-chart");
   if(dbPieChart)dbPieChart.destroy();
-  // Miktar bazlı pasta grafik verisi
   const typeAmounts={"Havale":0,"Shopier":0,"Kripto":0};
-  activeTx.forEach(t=>{if(typeAmounts[t.type]!==undefined)typeAmounts[t.type]+=t.amount;});
+  allTx.forEach(t=>{if(typeAmounts[t.type]!==undefined)typeAmounts[t.type]+=t.amount;});
   const totalPieAmt=Object.values(typeAmounts).reduce((s,v)=>s+v,0)||1;
   dbPieChart=new Chart(pieCtx,{type:"doughnut",data:{labels:Object.keys(typeCount),datasets:[{data:Object.values(typeCount),backgroundColor:["#3b82f6","#10b981","#f59e0b"],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"rgba(22,22,42,.95)",borderColor:"rgba(139,92,246,.2)",borderWidth:1,padding:10,callbacks:{label:(c)=>{const name=c.label;const cnt=c.parsed;const amt=typeAmounts[name]||0;const pct=Math.round((cnt/(Object.values(typeCount).reduce((s,v)=>s+v,0)||1))*100);return[" "+cnt+" işlem ("+pct+"%)"," ₺"+Math.round(amt).toLocaleString("tr-TR")];}}}},cutout:"65%"}});
   const total2=Object.values(typeCount).reduce((s,v)=>s+v,0)||1;
   const pieLegendColors={"Havale":"#3b82f6","Shopier":"#10b981","Kripto":"#f59e0b"};
   const typeAmountsForLegend={"Havale":0,"Shopier":0,"Kripto":0};
-  activeTx.forEach(t=>{if(typeAmountsForLegend[t.type]!==undefined)typeAmountsForLegend[t.type]+=t.amount;});
+  allTx.forEach(t=>{if(typeAmountsForLegend[t.type]!==undefined)typeAmountsForLegend[t.type]+=t.amount;});
   document.getElementById("db-pie-legend").innerHTML=Object.entries(typeCount).map(([name,cnt])=>`
     <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)">
       <div style="width:10px;height:10px;border-radius:50%;background:${pieLegendColors[name]};flex-shrink:0"></div>
@@ -3320,7 +3383,7 @@ async function renderDashboard(){
 
   // Saatlik yoğunluk
   const hourData=Array(24).fill(0);
-  activeTx.forEach(t=>{
+  allTx.forEach(t=>{
     if(!t.created_at)return;
     const h=new Date(t.created_at).getHours();
     hourData[h]++;
