@@ -2032,15 +2032,10 @@ function renderTop10(){
   document.getElementById("top10-balance").innerHTML=top10bal.map((c,i)=>`<div class="top10-row"><div class="top10-rank ${rankClass(i)}">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.id}</div></div><div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(c.balance)}</div></div>`).join("");
 
   const txTotals={};
-  // Transactions
+  // Sadece transactions tablosu - shopier_collections burada ayrıca sayılmaz
   transactions.filter(t=>!t.cancelled).forEach(t=>{
     if(!txTotals[t.cust_id])txTotals[t.cust_id]={name:t.cust_name,total:0,count:0};
     txTotals[t.cust_id].total+=t.amount;txTotals[t.cust_id].count++;
-  });
-  // Shopier tahsilatları da ekle (cust_id varsa)
-  (shopierCollections||[]).filter(r=>r.cust_id).forEach(r=>{
-    if(!txTotals[r.cust_id])txTotals[r.cust_id]={name:r.cust_name||r.customer_name||"—",total:0,count:0};
-    txTotals[r.cust_id].total+=(r.collection||0);txTotals[r.cust_id].count++;
   });
 
   const top10tx=Object.values(txTotals).sort((a,b)=>b.total-a.total).slice(0,10);
@@ -2352,14 +2347,15 @@ function setKasaTab(tab, btn){
 
 function updateKasaMetrics(){
   const active=transactions.filter(t=>!t.cancelled);
+  // Shopier tahsilatlarını ayrıca hesapla (transactions'da zaten var, çift sayma)
   const totalIncome=active.reduce((s,t)=>s+t.amount,0);
   const totalBonus=active.reduce((s,t)=>s+t.bonus,0);
   const totalExpense=expenses.reduce((s,e)=>s+e.amount,0);
   const net=totalIncome-totalBonus-totalExpense;
   const shopierKomTotal=expenses.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
   const uyeCount=new Set(active.map(t=>t.cust_id)).size;
-  const shopierTxCount=active.filter(t=>t.user_name==="shopier-bot").length;
-  const manuelTxCount=active.filter(t=>t.user_name!=="shopier-bot").length;
+  const shopierTxCount=active.filter(t=>t.user_name==="shopier-bot"||t.type==="Shopier").length;
+  const manuelTxCount=active.length-shopierTxCount;
 
   document.getElementById("k-income").textContent=fmt(totalIncome);
   const incSub=document.getElementById("k-income-sub");
@@ -2646,14 +2642,25 @@ function renderChart(){
   const ctx=document.getElementById("trend-chart");if(!ctx)return;
   const active=transactions.filter(t=>!t.cancelled);
   const now2=new Date();
+
+  // İşlem tarihini güvenli parse et
+  const getTxDate = t => {
+    if(t.created_at) return new Date(t.created_at);
+    if(t.date){
+      // "DD.MM.YYYY" formatı
+      const p = t.date.split(".");
+      if(p.length===3) return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    }
+    return null;
+  };
+
   let labels=[], data=[];
   if(chartMode==="monthly"){
     for(let i=11;i>=0;i--){
       const d=new Date(now2.getFullYear(),now2.getMonth()-i,1);
       labels.push(d.toLocaleDateString("tr-TR",{month:"short"}));
       const income=active.filter(t=>{
-        if(!t.created_at)return false;
-        const td=new Date(t.created_at);
+        const td=getTxDate(t); if(!td) return false;
         return td.getFullYear()===d.getFullYear()&&td.getMonth()===d.getMonth();
       }).reduce((s,t)=>s+t.amount,0);
       data.push(income);
@@ -2663,19 +2670,17 @@ function renderChart(){
       const d=new Date(now2);d.setDate(d.getDate()-i);
       labels.push(d.toLocaleDateString("tr-TR",{weekday:"short"}));
       const income=active.filter(t=>{
-        if(!t.created_at)return false;
-        return new Date(t.created_at).toDateString()===d.toDateString();
+        const td=getTxDate(t); if(!td) return false;
+        return td.toDateString()===d.toDateString();
       }).reduce((s,t)=>s+t.amount,0);
       data.push(income);
     }
   } else {
-    // Günlük - bugünün saatleri
     for(let i=23;i>=0;i--){
       const h=new Date(now2);h.setHours(now2.getHours()-i,0,0,0);
       labels.push(String(h.getHours()).padStart(2,"0")+":00");
       const income=active.filter(t=>{
-        if(!t.created_at)return false;
-        const td=new Date(t.created_at);
+        const td=getTxDate(t); if(!td) return false;
         return td.toDateString()===now2.toDateString()&&td.getHours()===h.getHours();
       }).reduce((s,t)=>s+t.amount,0);
       data.push(income);
@@ -3231,20 +3236,13 @@ async function renderDashboard(){
   const todayStr2 = today.toLocaleDateString("tr-TR",{day:"numeric",month:"short",year:"numeric"});
   const monthStart = new Date(today.getFullYear(),today.getMonth(),1);
 
-  // Aktif işlemler
+  // Aktif işlemler (transactions tablosu - tek kaynak gerçeği)
   const activeTx = transactions.filter(t=>!t.cancelled);
-  // Shopier tahsilatları da dahil et
-  const scTx = (shopierCollections||[]).map(r=>({
-    amount: r.collection||0, bonus:0, type:"Shopier",
-    cust_name: r.cust_name||r.customer_name||"—",
-    user_name:"shopier-bot", date:(r.payment_date||r.order_date||"").substring(0,10),
-    created_at: r.payment_date||r.order_date||null, note: r.order_id||""
-  }));
-  const allTx = [...activeTx, ...scTx];
+  const allTx = activeTx; // shopier_collections ayrı muhasebe kaydı, transactions'da zaten var
 
   // Bugünkü gelir
   const todayStr3 = today.toLocaleDateString("tr-TR");
-  const todayIncome = allTx.filter(t=>{
+  const todayIncome = activeTx.filter(t=>{
     if(!t.created_at) return t.date === todayStr3;
     return new Date(t.created_at).toDateString() === today.toDateString();
   }).reduce((s,t)=>s+t.amount,0);
@@ -3308,8 +3306,8 @@ async function renderDashboard(){
       <div style="font-size:12px;font-weight:700;color:var(--success)">${fmt(c.total)}</div>
     </div>`).join("") : '<div style="font-size:12px;color:var(--text3)">Bu ay işlem yok.</div>';
 
-  // Son işlemler — transactions + tahsilatlar birleşik, tarihe göre sıralı
-  const feed = [...allTx].sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||"")).slice(0,5);
+  // Son işlemler — tarihe göre sıralı
+  const feed = [...activeTx].sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||"")).slice(0,5);
   const icClass=t=>t.type==="Havale"?"ic-bank":t.type==="Kripto"?"ic-crypto":"ic-card";
   const typeEmojis={"Havale":"🏦","Shopier":"🤖","Kripto":"₿"};
   const typeGradients={"Havale":"linear-gradient(135deg,#3b82f6,#1d4ed8)","Shopier":"linear-gradient(135deg,#10b981,#047857)","Kripto":"linear-gradient(135deg,#f59e0b,#d97706)"};
