@@ -3243,7 +3243,11 @@ async function renderDashboard(){
   const allTx = [...activeTx, ...scTx];
 
   // Bugünkü gelir
-  const todayIncome = allTx.filter(t=>t.date&&t.date.startsWith(today.toLocaleDateString("tr-TR",{day:"numeric",month:"short",year:"numeric"}).split(" ")[0])).reduce((s,t)=>s+t.amount,0);
+  const todayStr3 = today.toLocaleDateString("tr-TR");
+  const todayIncome = allTx.filter(t=>{
+    if(!t.created_at) return t.date === todayStr3;
+    return new Date(t.created_at).toDateString() === today.toDateString();
+  }).reduce((s,t)=>s+t.amount,0);
 
   // Bu ayki gelir
   const monthIncome = allTx.filter(t=>{
