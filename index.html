@@ -483,7 +483,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
   <div id="page-musteriler" class="page">
     <div class="metrics-4">
       <div class="metric metric-accent"><div class="lbl"><i class="ti ti-users"></i>Toplam üye</div><div class="val" id="m-count">0</div><div class="sub" id="m-date-sub"></div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-coin"></i>Toplam bakiye</div><div class="val" id="m-balance" style="color:var(--success)">₺0</div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-coin"></i>Toplam bakiye</div><div class="val" id="m-balance" style="color:var(--success)">₺0</div><div class="sub" id="m-balance-num" style="color:var(--purple)"></div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-trending-up"></i>Bakiyeli üye</div><div class="val" id="m-with-balance">0</div><div class="sub">Bakiye > 0</div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-user-plus"></i>En yeni üye</div><div class="val" id="m-newest" style="font-size:13px;margin-top:4px">—</div><div class="sub" id="m-newest-date"></div></div>
     </div>
@@ -739,15 +739,36 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
             </label>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px">
+        <!-- METRİKLER -->
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px">
           <div class="metric"><div class="lbl"><i class="ti ti-cash" style="color:var(--success)"></i>Toplam satış</div><div class="val" id="sc-total-sales" style="color:var(--success)">₺0</div></div>
           <div class="metric"><div class="lbl"><i class="ti ti-percent" style="color:var(--danger)"></i>Toplam komisyon</div><div class="val" id="sc-total-fee" style="color:var(--danger)">₺0</div></div>
           <div class="metric"><div class="lbl"><i class="ti ti-wallet" style="color:var(--purple)"></i>Net tahsilat</div><div class="val" id="sc-net" style="color:var(--purple)">₺0</div></div>
           <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--warning)"></i>Eşleşen üye</div><div class="val" id="sc-matched" style="color:var(--warning)">0/0</div></div>
+          <div class="metric" style="border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.06)">
+            <div class="lbl"><i class="ti ti-calendar-due" style="color:var(--success)"></i>Gelecek ödeme</div>
+            <div class="val" id="sc-upcoming-amount" style="color:var(--success)">₺0</div>
+            <div class="sub" id="sc-upcoming-date" style="color:var(--success)">—</div>
+          </div>
+        </div>
+        <!-- FİLTRELER -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+          <input type="text" id="sc-search" placeholder="Müşteri ara..." oninput="renderShopierCollections()" style="flex:1;min-width:140px;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+          <input type="date" id="sc-date-from" onchange="renderShopierCollections()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)" title="Planlanan ödeme başlangıç">
+          <input type="date" id="sc-date-to" onchange="renderShopierCollections()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)" title="Planlanan ödeme bitiş">
+          <select id="sc-sort" onchange="renderShopierCollections()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+            <option value="date-desc">Ödeme tarihi ↓</option>
+            <option value="date-asc">Ödeme tarihi ↑</option>
+            <option value="name-asc">İsim A→Z</option>
+            <option value="name-desc">İsim Z→A</option>
+            <option value="amount-desc">Tutar büyük→küçük</option>
+            <option value="amount-asc">Tutar küçük→büyük</option>
+          </select>
+          <button onclick="clearScFilters()" style="font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer"><i class="ti ti-x"></i> Temizle</button>
         </div>
         <table>
-          <colgroup><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:17%"><col style="width:14%"><col style="width:13%"><col style="width:11%"><col style="width:10%"></colgroup>
-          <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Ödeme Tarihi</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th></tr></thead>
+          <colgroup><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:17%"><col style="width:12%"><col style="width:13%"><col style="width:11%"><col style="width:12%"></colgroup>
+          <thead><tr><th>Sipariş No</th><th>Sipariş Tarihi</th><th>Plan. Ödeme</th><th>Müşteri</th><th>Üye</th><th>Satış Fiyatı</th><th>Hizmet+KDV</th><th>Net</th></tr></thead>
           <tbody id="shopier-col-body"></tbody>
         </table>
         <div id="no-shopier-col" style="text-align:center;padding:2rem;font-size:12px;color:var(--text3)">Henüz tahsilat verisi yok. Excel dosyasını yükleyin.</div>
@@ -1487,8 +1508,10 @@ function renderCustomers(){
   const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
   if(custPage>=totalPages) custPage=totalPages-1;
   const slice=filtered.slice(custPage*PAGE_SIZE,(custPage+1)*PAGE_SIZE);
+  const USD_TRY = 47.63;
+  const PRICE_TRY = 1.02 * USD_TRY;
   document.getElementById("cust-body").innerHTML=slice.map(c=>{
-    const numCount = Math.floor((c.balance||0)/1.02);
+    const numCount = Math.floor((c.balance||0)/PRICE_TRY);
     return `<tr>
     <td style="color:var(--text3);font-size:11px">${c.id}</td>
     <td onclick="openCustDetail('${c.id}')" style="cursor:pointer;font-weight:600">${c.name}${transactions.some(t=>t.cust_id===c.id&&t.user_name==="shopier-bot")?' <span style="font-size:9px;padding:1px 5px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)">Shopier</span>':''}</td>
@@ -1513,8 +1536,15 @@ function renderCustomers(){
 function changePage(dir){custPage+=dir;renderCustomers();}
 
 function updateCustomerMetrics(){
+  const USD_TRY = 47.63;
+  const PRICE_USD = 1.02;
+  const PRICE_TRY = PRICE_USD * USD_TRY;
+  const totalBal = customers.reduce((s,c)=>s+(c.balance||0),0);
+  const totalNum = Math.floor(totalBal / PRICE_TRY);
   document.getElementById("m-count").textContent=customers.length;
-  document.getElementById("m-balance").textContent=fmt(customers.reduce((s,c)=>s+(c.balance||0),0));
+  document.getElementById("m-balance").textContent=fmt(totalBal);
+  const numEl = document.getElementById("m-balance-num");
+  if(numEl) numEl.textContent = totalNum>0 ? "≈ "+totalNum+" TR numarası" : "";
   document.getElementById("m-with-balance").textContent=customers.filter(c=>(c.balance||0)>0).length;
   if(customers.length){
     document.getElementById("m-newest").textContent=customers[0].name;
@@ -1531,8 +1561,10 @@ function openCustDetail(id){
   const c=customers.find(x=>x.id===id);if(!c)return;
   document.getElementById("cd-title").textContent=c.name;
   const custTxs=transactions.filter(t=>t.cust_id===id&&!t.cancelled);
+  const USD_TRY = 47.63;
+  const PRICE_TRY = 1.02 * USD_TRY;
   const bal = c.balance||0;
-  const numCount = Math.floor(bal/1.02);
+  const numCount = Math.floor(bal / PRICE_TRY);
   document.getElementById("cd-content").innerHTML=`
     <dl style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:13px;margin-bottom:1rem">
       <dt style="color:var(--text2)">ID</dt><dd style="font-weight:700;color:var(--purple)">${c.id}</dd>
@@ -1992,27 +2024,104 @@ function renderTop10(){
 // ============================================================
 let kasaCurrentTab = "all";
 
+let shopierCollections = [];
+
 async function loadShopierCollections(){
   const {data} = await db.from("shopier_collections").select("*").order("payment_date",{ascending:false});
-  const rows = data||[];
-  document.getElementById("shopier-col-count").textContent = rows.length+" kayıt";
-  document.getElementById("no-shopier-col").style.display = rows.length?"none":"block";
+  shopierCollections = data||[];
+  renderShopierCollections();
+}
 
+function clearScFilters(){
+  document.getElementById("sc-search").value="";
+  document.getElementById("sc-date-from").value="";
+  document.getElementById("sc-date-to").value="";
+  document.getElementById("sc-sort").value="date-desc";
+  renderShopierCollections();
+}
+
+function renderShopierCollections(){
+  const rows = shopierCollections;
+  const q = (document.getElementById("sc-search")?.value||"").toLowerCase().trim();
+  const dateFrom = document.getElementById("sc-date-from")?.value||"";
+  const dateTo = document.getElementById("sc-date-to")?.value||"";
+  const sort = document.getElementById("sc-sort")?.value||"date-desc";
+
+  // Genel metrikler (filtre öncesi)
   const totalSales = rows.reduce((s,r)=>s+(r.sales_price||0),0);
-  const totalFee = rows.reduce((s,r)=>s+(r.service_fee||0)+(r.vat||0),0);
-  const totalNet = rows.reduce((s,r)=>s+(r.collection||0),0);
-  const matched = rows.filter(r=>r.cust_id).length;
-
+  const totalFee   = rows.reduce((s,r)=>s+(r.service_fee||0)+(r.vat||0),0);
+  const totalNet   = rows.reduce((s,r)=>s+(r.collection||0),0);
+  const matched    = rows.filter(r=>r.cust_id).length;
   document.getElementById("sc-total-sales").textContent = fmt(totalSales);
-  document.getElementById("sc-total-fee").textContent = fmt(totalFee);
-  document.getElementById("sc-net").textContent = fmt(totalNet);
-  document.getElementById("sc-matched").textContent = matched+"/"+rows.length;
+  document.getElementById("sc-total-fee").textContent   = fmt(totalFee);
+  document.getElementById("sc-net").textContent         = fmt(totalNet);
+  document.getElementById("sc-matched").textContent     = matched+"/"+rows.length;
+  document.getElementById("shopier-col-count").textContent = rows.length+" kayıt";
 
-  document.getElementById("shopier-col-body").innerHTML = rows.map(r=>`
+  // Gelecek ödeme (planned_date > bugün)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = rows.filter(r=>{
+    if(!r.planned_date) return false;
+    // DD/MM/YYYY veya YYYY-MM-DD formatını parse et
+    const parts = r.planned_date.trim().split(/[\/\-]/);
+    let d;
+    if(parts.length===3){
+      if(parts[0].length===4) d = new Date(parts[0],parts[1]-1,parts[2]);
+      else d = new Date(parts[2],parts[1]-1,parts[0]);
+    }
+    return d && d >= today;
+  });
+  const upcomingAmount = upcoming.reduce((s,r)=>s+(r.collection||0),0);
+  // En yakın tarih
+  const nextDates = upcoming.map(r=>{
+    const parts = r.planned_date.trim().split(/[\/\-]/);
+    if(parts[0].length===4) return new Date(parts[0],parts[1]-1,parts[2]);
+    return new Date(parts[2],parts[1]-1,parts[0]);
+  }).filter(Boolean).sort((a,b)=>a-b);
+  const nextDate = nextDates[0];
+  document.getElementById("sc-upcoming-amount").textContent = fmt(upcomingAmount);
+  document.getElementById("sc-upcoming-date").textContent = nextDate
+    ? nextDate.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+" tarihinde"
+    : "—";
+
+  // Filtreleme
+  let filtered = rows.filter(r=>{
+    if(q && !((r.customer_name||"").toLowerCase().includes(q)||(r.cust_name||"").toLowerCase().includes(q))) return false;
+    if(dateFrom || dateTo){
+      if(!r.planned_date) return false;
+      const parts = r.planned_date.trim().split(/[\/\-]/);
+      let d;
+      if(parts[0].length===4) d = new Date(parts[0],parts[1]-1,parts[2]);
+      else d = new Date(parts[2],parts[1]-1,parts[0]);
+      if(dateFrom && d < new Date(dateFrom)) return false;
+      if(dateTo   && d > new Date(dateTo))   return false;
+    }
+    return true;
+  });
+
+  // Sıralama
+  filtered.sort((a,b)=>{
+    const parseDate = r=>{
+      if(!r.planned_date) return new Date(0);
+      const p = r.planned_date.trim().split(/[\/\-]/);
+      if(p[0].length===4) return new Date(p[0],p[1]-1,p[2]);
+      return new Date(p[2],p[1]-1,p[0]);
+    };
+    if(sort==="date-desc") return parseDate(b)-parseDate(a);
+    if(sort==="date-asc")  return parseDate(a)-parseDate(b);
+    if(sort==="name-asc")  return (a.customer_name||"").localeCompare(b.customer_name||"","tr");
+    if(sort==="name-desc") return (b.customer_name||"").localeCompare(a.customer_name||"","tr");
+    if(sort==="amount-desc") return (b.collection||0)-(a.collection||0);
+    if(sort==="amount-asc")  return (a.collection||0)-(b.collection||0);
+    return 0;
+  });
+
+  document.getElementById("no-shopier-col").style.display = filtered.length?"none":"block";
+  document.getElementById("shopier-col-body").innerHTML = filtered.map(r=>`
     <tr>
       <td style="font-size:11px;color:var(--text3)">${r.order_id||"—"}</td>
       <td style="font-size:11px;color:var(--text2)">${(r.order_date||"—").substring(0,10)}</td>
-      <td style="font-size:11px;color:var(--text2)">${(r.payment_date||"—").substring(0,10)}</td>
+      <td style="font-size:11px;color:var(--success);font-weight:600">${r.planned_date||"—"}</td>
       <td style="font-size:12px;font-weight:600">${r.customer_name||"—"}</td>
       <td>${r.cust_name?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)">${r.cust_name}</span>`:`<span style="font-size:10px;color:var(--text3)">—</span>`}</td>
       <td style="font-size:12px;font-weight:600;color:var(--success)">${fmt(r.sales_price||0)}</td>
@@ -2142,7 +2251,7 @@ async function importShopierExcel(input){
           vat           : vat,
           collection    : collection,
 
-          cust_id       : cust?.id   || null,
+          planned_date  : idx.planDate !== -1 ? String(r[idx.planDate]||"").trim() : "",
           cust_name     : cust?.name || null,
         };
       });
