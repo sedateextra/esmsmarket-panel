@@ -507,8 +507,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           </div>
           <div class="srow"><input type="text" id="cust-search" placeholder="Ara..." oninput="custPage=0;renderCustomers()"></div>
           <table>
-            <colgroup><col style="width:10%"><col style="width:18%"><col style="width:22%"><col style="width:13%"><col style="width:13%"><col style="width:11%"><col style="width:13%"></colgroup>
-            <thead><tr><th>ID</th><th>Kullanıcı</th><th>E-posta</th><th>Bakiye</th><th>Kayıt</th><th>Not</th><th></th></tr></thead>
+            <colgroup><col style="width:9%"><col style="width:16%"><col style="width:20%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col style="width:10%"><col style="width:13%"></colgroup>
+            <thead><tr><th>ID</th><th>Kullanıcı</th><th>E-posta</th><th>Bakiye</th><th>TR Num.</th><th>Kayıt</th><th>Not</th><th></th></tr></thead>
             <tbody id="cust-body"></tbody>
           </table>
           <div class="pager">
@@ -841,8 +841,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
             </select>
           </div>
           <table>
-            <colgroup><col style="width:18%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:18%"><col style="width:16%"></colgroup>
-            <thead><tr><th>Kullanıcı</th><th>Borç</th><th>Ödenen</th><th>Kalan</th><th>Durum</th><th>Eklenme</th><th></th></tr></thead>
+            <colgroup><col style="width:15%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:11%"><col style="width:13%"><col style="width:20%"><col style="width:10%"></colgroup>
+            <thead><tr><th>Kullanıcı</th><th>Borç</th><th>Ödenen</th><th>Kalan</th><th>Durum</th><th>Eklenme</th><th>Not</th><th></th></tr></thead>
             <tbody id="borc-body"></tbody>
           </table>
           <div id="no-borc" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz borçlu kaydı yok.</div>
@@ -1487,20 +1487,22 @@ function renderCustomers(){
   const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
   if(custPage>=totalPages) custPage=totalPages-1;
   const slice=filtered.slice(custPage*PAGE_SIZE,(custPage+1)*PAGE_SIZE);
-  document.getElementById("cust-body").innerHTML=slice.map(c=>`<tr>
+  document.getElementById("cust-body").innerHTML=slice.map(c=>{
+    const numCount = Math.floor((c.balance||0)/1.02);
+    return `<tr>
     <td style="color:var(--text3);font-size:11px">${c.id}</td>
     <td onclick="openCustDetail('${c.id}')" style="cursor:pointer;font-weight:600">${c.name}${transactions.some(t=>t.cust_id===c.id&&t.user_name==="shopier-bot")?' <span style="font-size:9px;padding:1px 5px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)">Shopier</span>':''}</td>
     <td style="color:var(--text2);font-size:11px" title="${c.email}">${c.email}</td>
     <td style="font-weight:700;color:${(c.balance||0)>0?"var(--success)":"var(--text3)"}">${fmt(c.balance)}</td>
-    <td style="color:var(--text3);font-size:11px">${c.since||"—"}</td>
+    <td style="font-size:11px;color:var(--purple);font-weight:600">${numCount>0?numCount+" 🇹🇷":"—"}</td>
     <td style="color:var(--text3);font-size:11px" id="last-tx-${c.id}">—</td>
-    <td><span style="font-size:10px;color:${c.notes&&c.notes.length>0?"var(--warning)":"var(--text3)"}">${c.notes&&c.notes.length>0?c.notes.length+" not":"—"}</span></td>
+    <td style="color:var(--text3);font-size:11px">${c.notes&&c.notes.length>0?c.notes.length+" not":"—"}</td>
     <td><div class="inline-actions">
       <button class="btn-xs" onclick="openNoteModal('${c.id}')" title="Not ekle"><i class="ti ti-notes"></i></button>
       <button class="btn-xs" onclick="openCustomerModal('${c.id}')" title="Düzenle"><i class="ti ti-edit"></i></button>
       <button class="btn-danger-sm" onclick="deleteCustomer('${c.id}')" title="Sil"><i class="ti ti-trash"></i></button>
     </div></td>
-  </tr>`).join("");
+  </tr>`;}).join("");
   document.getElementById("page-info").textContent=`${custPage+1} / ${totalPages}`;
   document.getElementById("total-info").textContent=`(${total} üye)`;
   document.getElementById("prev-btn").disabled=custPage===0;
@@ -1529,13 +1531,19 @@ function openCustDetail(id){
   const c=customers.find(x=>x.id===id);if(!c)return;
   document.getElementById("cd-title").textContent=c.name;
   const custTxs=transactions.filter(t=>t.cust_id===id&&!t.cancelled);
+  const bal = c.balance||0;
+  const numCount = Math.floor(bal/1.02);
   document.getElementById("cd-content").innerHTML=`
     <dl style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:13px;margin-bottom:1rem">
       <dt style="color:var(--text2)">ID</dt><dd style="font-weight:700;color:var(--purple)">${c.id}</dd>
       <dt style="color:var(--text2)">E-posta</dt><dd style="font-size:11px">${c.email}</dd>
-      <dt style="color:var(--text2)">Bakiye</dt><dd style="font-weight:700;color:var(--success)">${fmt(c.balance)}</dd>
+      <dt style="color:var(--text2)">Bakiye</dt><dd style="font-weight:700;color:var(--success)">${fmt(bal)}</dd>
       <dt style="color:var(--text2)">Kayıt</dt><dd>${c.since||"—"}</dd>
     </dl>
+    <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:11px;color:var(--text2)"><i class="ti ti-device-sim" style="margin-right:5px;color:var(--purple)"></i>TR numarası ($1.02)</div>
+      <div style="font-size:16px;font-weight:700;color:var(--purple)">${numCount} adet</div>
+    </div>
     ${c.notes&&c.notes.length>0?`<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--warning)"><i class="ti ti-notes" style="margin-right:4px"></i>Notlar</div><div style="margin-bottom:12px">${c.notes.map(n=>`<div class="note-item"><div class="note-meta"><span>${n.user}</span><span>${n.ts}</span></div><div class="note-text">${n.text}</div></div>`).join("")}</div>`:""}
     ${custTxs.length?`<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text2)">İşlemler</div><table style="font-size:11px"><thead><tr><th>Tutar</th><th>Bonus</th><th>Tür</th><th>Tarih</th></tr></thead><tbody>${custTxs.map(t=>`<tr><td style="font-weight:700">${fmt(t.amount)}</td><td style="color:var(--success)">${t.bonus>0?fmt(t.bonus):"—"}</td><td><span class="tbadge" style="font-size:10px">${t.type}</span></td><td style="color:var(--text3)">${t.date}</td></tr>`).join("")}</tbody></table>`:'<div style="font-size:12px;color:var(--text3)">İşlem yok.</div>'}
   `;
@@ -2182,8 +2190,15 @@ function setKasaTab(tab, btn){
     if(kasaMetrics) kasaMetrics.style.display = "none";
     if(kasaTableCard) kasaTableCard.style.display = "none";
     loadShopierCollections();
+  } else if(tab === "shopier"){
+    // Shopier işlemleri + altında tahsilat verileri
+    if(colWrap){ colWrap.style.display = "block"; colWrap.style.marginTop = "12px"; }
+    if(kasaMetrics) kasaMetrics.style.display = "grid";
+    if(kasaTableCard) kasaTableCard.style.display = "block";
+    updateKasaMetrics();
+    loadShopierCollections();
   } else {
-    // Diğer sekmeler: normal kasa görünümü
+    // Diğer sekmeler: normal kasa görünümü, tahsilat gizli
     if(colWrap) colWrap.style.display = "none";
     if(kasaMetrics) kasaMetrics.style.display = "grid";
     if(kasaTableCard) kasaTableCard.style.display = "block";
@@ -2271,9 +2286,9 @@ function updateKasaMetrics(){
     rows=rows.concat(filteredExp.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+e.date+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td></tr>"));
   }
 
-  const total=rows.length;
-  if(document.getElementById("kasa-table-count")) document.getElementById("kasa-table-count").textContent=total+" kayıt";
-  document.getElementById("no-kasa").style.display=total?"none":"block";
+  const kasa_total=rows.length;
+  if(document.getElementById("kasa-table-count")) document.getElementById("kasa-table-count").textContent=kasa_total+" kayıt";
+  document.getElementById("no-kasa").style.display=kasa_total?"none":"block";
   document.getElementById("kasa-body").innerHTML=rows.join("");
 }
 
@@ -2289,9 +2304,8 @@ function donemKapat(tip){
   let baslangic, bitis, baslik;
 
   if(tip==="hafta"){
-    bitis = new Date(now);
+    bitis = new Date(now); bitis.setHours(23,59,59,999);
     baslangic = new Date(now); baslangic.setDate(now.getDate()-6); baslangic.setHours(0,0,0,0);
-    bitis.setHours(23,59,59,999);
     baslik = "📅 Haftayı Kapat";
   } else {
     baslangic = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -2300,6 +2314,8 @@ function donemKapat(tip){
   }
 
   const active = transactions.filter(t=>!t.cancelled);
+
+  // Dönem içi (geçmiş)
   const periodTx = active.filter(t=>{
     if(!t.created_at) return false;
     const d=new Date(t.created_at);
@@ -2311,49 +2327,79 @@ function donemKapat(tip){
     return d>=baslangic&&d<=bitis;
   });
 
-  const gelir = periodTx.reduce((s,t)=>s+t.amount,0);
-  const bonus = periodTx.reduce((s,t)=>s+t.bonus,0);
-  const gider = periodExp.reduce((s,e)=>s+e.amount,0);
-  const net = gelir - bonus - gider;
+  // Dönem dışı aktif (devam eden)
+  const activeTx = active.filter(t=>{
+    if(!t.created_at) return false;
+    return new Date(t.created_at) > bitis;
+  });
+
+  const gelir   = periodTx.reduce((s,t)=>s+t.amount,0);
+  const bonus   = periodTx.reduce((s,t)=>s+t.bonus,0);
+  const gider   = periodExp.reduce((s,e)=>s+e.amount,0);
+  const net     = gelir - bonus - gider;
   const shopierGelir = periodTx.filter(t=>t.user_name==="shopier-bot").reduce((s,t)=>s+t.amount,0);
-  const havaleGelir = periodTx.filter(t=>t.type==="Havale"||t.type==="Havale/EFT").reduce((s,t)=>s+t.amount,0);
-  const kriptoGelir = periodTx.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
+  const havaleGelir  = periodTx.filter(t=>t.type==="Havale"||t.type==="Havale/EFT").reduce((s,t)=>s+t.amount,0);
+  const kriptoGelir  = periodTx.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
+
+  const aktifGelir  = activeTx.reduce((s,t)=>s+t.amount,0);
+  const aktifBonus  = activeTx.reduce((s,t)=>s+t.bonus,0);
+  const aktifUye    = new Set(activeTx.map(t=>t.cust_id)).size;
 
   document.getElementById("donem-modal-title").textContent = baslik;
   const fmtDate = d=>d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+
   document.getElementById("donem-ozet").innerHTML = `
-    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${fmtDate(baslangic)} — ${fmtDate(bitis)}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div style="background:var(--card2);border-radius:10px;padding:10px">
-        <div style="font-size:11px;color:var(--text2)">Toplam gelir</div>
-        <div style="font-size:16px;font-weight:700;color:var(--success)">${fmt(gelir)}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">📆 Dönem: ${fmtDate(baslangic)} — ${fmtDate(bitis)}</div>
+
+    <!-- GEÇMİŞ DÖNEM -->
+    <div style="font-size:11px;font-weight:700;color:var(--warning);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📊 Dönem içi (geçmiş)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">
+      <div style="background:var(--card2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Toplam gelir</div>
+        <div style="font-size:14px;font-weight:700;color:var(--success)">${fmt(gelir)}</div>
         <div style="font-size:10px;color:var(--text3)">${periodTx.length} işlem</div>
       </div>
-      <div style="background:var(--card2);border-radius:10px;padding:10px">
-        <div style="font-size:11px;color:var(--text2)">Net kasa</div>
-        <div style="font-size:16px;font-weight:700;color:${net>=0?"var(--success)":"var(--danger)"}">${fmt(net)}</div>
-        <div style="font-size:10px;color:var(--text3)">Gelir - Bonus - Gider</div>
-      </div>
-      <div style="background:var(--card2);border-radius:10px;padding:10px">
-        <div style="font-size:11px;color:var(--text2)">Bonus</div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Bonus</div>
         <div style="font-size:14px;font-weight:700;color:var(--warning)">${fmt(bonus)}</div>
       </div>
-      <div style="background:var(--card2);border-radius:10px;padding:10px">
-        <div style="font-size:11px;color:var(--text2)">Gider</div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Gider</div>
         <div style="font-size:14px;font-weight:700;color:var(--danger)">${fmt(gider)}</div>
       </div>
-      <div style="background:var(--card2);border-radius:10px;padding:10px">
-        <div style="font-size:11px;color:var(--text2)">🤖 Shopier</div>
+      <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Net kasa</div>
+        <div style="font-size:15px;font-weight:700;color:${net>=0?"var(--success)":"var(--danger)"}">${fmt(net)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">🤖 Shopier</div>
         <div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(shopierGelir)}</div>
       </div>
-      <div style="background:var(--card2);border-radius:10px;padding:10px">
-        <div style="font-size:11px;color:var(--text2)">🏦 Havale/EFT</div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">🏦 Havale/EFT</div>
         <div style="font-size:13px;font-weight:700;color:var(--info)">${fmt(havaleGelir)}</div>
+      </div>
+    </div>
+
+    <!-- AKTİF DEVAM EDEN -->
+    <div style="font-size:11px;font-weight:700;color:var(--success);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">⚡ Dönem sonrası aktif</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Gelir</div>
+        <div style="font-size:14px;font-weight:700;color:var(--success)">${fmt(aktifGelir)}</div>
+        <div style="font-size:10px;color:var(--text3)">${activeTx.length} işlem</div>
+      </div>
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Bonus</div>
+        <div style="font-size:14px;font-weight:700;color:var(--warning)">${fmt(aktifBonus)}</div>
+      </div>
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:9px;padding:9px">
+        <div style="font-size:10px;color:var(--text2)">Aktif üye</div>
+        <div style="font-size:14px;font-weight:700;color:var(--purple)">${aktifUye}</div>
       </div>
     </div>`;
 
   document.getElementById("donem-overlay").style.display = "flex";
-  // Geçici veriler sakla
   window._donemData = { tip, baslangic, bitis, gelir, bonus, gider, net, shopierGelir, havaleGelir, kriptoGelir, txCount:periodTx.length };
 }
 
@@ -2807,6 +2853,7 @@ function renderBorcular(){
       <td style="font-weight:700;color:${kalan>0?"var(--warning)":"var(--success)"}">${fmt(kalan)}</td>
       <td><span class="sbadge" style="${statusStyle(b.status)}">${b.status}</span></td>
       <td style="font-size:11px;color:var(--text3)">${createdDate}</td>
+      <td style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${b.note||""}">${b.note||"—"}</td>
       <td><div class="inline-actions">
         <button class="btn-xs" onclick="openBorcPayment(${b.id})" title="Ödeme al" style="border-color:rgba(16,185,129,.4);color:var(--success)"><i class="ti ti-cash"></i></button>
         <button class="btn-xs" onclick="openBorcModal(${b.id})" title="Düzenle"><i class="ti ti-edit"></i></button>
