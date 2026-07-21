@@ -633,10 +633,47 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <div class="metric"><div class="lbl"><i class="ti ti-arrow-down-circle" style="color:var(--danger)"></i>Toplam gider</div><div class="val kval-expense" id="k-expense">₺0</div><div class="sub" id="k-expense-sub"></div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div><div class="val kval-bonus" id="k-bonus">₺0</div><div class="sub" id="k-bonus-sub"></div></div>
     </div>
-    <div class="metric-top-bar" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
+    <div class="metric-top-bar" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
       <div class="metric"><div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--warning)"></i>Shopier komisyonu</div><div class="val" id="k-komisyon" style="color:var(--warning)">₺0</div><div class="sub" id="k-komisyon-sub"></div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--purple)"></i>İşlem yapan üye</div><div class="val" id="k-uye-count" style="color:var(--purple)">0</div><div class="sub" id="k-uye-sub"></div></div>
       <div class="metric metric-accent"><div class="lbl"><i class="ti ti-scale"></i>Net kasa</div><div class="val" id="k-net">₺0</div><div class="sub" id="k-net-sub"></div></div>
+      <div class="metric" style="border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.06);cursor:pointer" onclick="openNakitKasa()">
+        <div class="lbl"><i class="ti ti-cash" style="color:var(--success)"></i>Nakit kasa</div>
+        <div class="val" id="k-nakit" style="color:var(--success)">₺0</div>
+        <div class="sub" id="k-nakit-sub" style="color:var(--success)">Tıkla → Detay</div>
+      </div>
+    </div>
+
+    <!-- NAKİT KASA MODALI -->
+    <div class="overlay-wrap" id="nakit-overlay" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
+      <div class="modal" style="max-width:520px">
+        <div class="modal-hdr"><h3>💵 Nakit Kasa</h3><button onclick="document.getElementById('nakit-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div class="metric"><div class="lbl">Toplam nakit</div><div class="val" id="nk-total" style="color:var(--success)">₺0</div></div>
+          <div class="metric"><div class="lbl">Shopier bekleyen</div><div class="val" id="nk-shopier-pending" style="color:var(--warning)">₺0</div><div class="sub" id="nk-shopier-date">—</div></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Nakit hareketleri</div>
+        <div id="nk-list" style="max-height:200px;overflow-y:auto;margin-bottom:14px"></div>
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px">Nakit giriş ekle</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="number" id="nk-amount" placeholder="Tutar (₺)" style="flex:1;min-width:100px;font-size:12px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+            <input type="text" id="nk-desc" placeholder="Açıklama" style="flex:2;min-width:120px;font-size:12px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+            <select id="nk-type" style="font-size:12px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+              <option value="Shopier Ödemesi">🤖 Shopier Ödemesi</option>
+              <option value="Havale">🏦 Havale</option>
+              <option value="Kripto">₿ Kripto</option>
+              <option value="Diğer">Diğer</option>
+            </select>
+            <button class="btn-save" onclick="addNakitGiris()" style="font-size:12px;padding:7px 14px"><i class="ti ti-plus"></i> Ekle</button>
+          </div>
+          <div style="margin-top:10px">
+            <button onclick="shopierToNakit()" style="width:100%;font-size:12px;padding:8px;border-radius:8px;border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.1);color:var(--success);cursor:pointer;font-weight:600">
+              <i class="ti ti-arrow-right-circle"></i> Shopier bekleyen tutarı nakite aktar (Çarşamba)
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ÖDEME YÖNTEMİ SEKMELERİ -->
@@ -731,7 +768,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
       <div id="kasa-table-wrap">
         <table><colgroup><col style="width:16%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:25%"></colgroup>
-          <thead><tr><th>Üye / Açıklama</th><th>Tür</th><th>Tutar</th><th>Bonus</th><th>Kaynak</th><th>Tarih</th><th>Not</th></tr></thead>
+          <thead><tr><th>Üye / Açıklama</th><th>Tür</th><th>Tutar</th><th>Bonus</th><th>Kaynak</th><th>Tarih</th><th>Not</th><th style="width:50px"></th></tr></thead>
           <tbody id="kasa-body"></tbody>
         </table>
       </div>
@@ -1363,6 +1400,9 @@ async function loadAll(){
     borclar = (borRes.data||[]).map(b=>({...b, payments: b.payments||[]}));
     shopierCollections = scRes.data||[];
     await loadSmsLogs();
+    // Nakit kasa hareketlerini yükle
+    const {data:nakitData}=await db.from("logs").select("*").eq("action","nakit").order("created_at",{ascending:false}).limit(50);
+    nakitHareketler = nakitData||[];
     bonusRules = {};
     (bRes.data||[]).forEach(r=>{ bonusRules[r.type]=r; });
     if(!bonusRules["Havale"]) bonusRules = {
@@ -2374,6 +2414,12 @@ function updateKasaMetrics(){
   if(uyeSub) uyeSub.textContent=manuelTxCount+" manuel · "+shopierTxCount+" Shopier";
   document.getElementById("k-net").textContent=fmt(net);
   document.getElementById("k-net").style.color=net>=0?"var(--success)":"var(--danger)";
+  // Nakit kasa
+  const nakitTotal=(nakitHareketler||[]).reduce((s,n)=>s+(n.amount||0),0);
+  const nakitEl=document.getElementById("k-nakit");
+  if(nakitEl){ nakitEl.textContent=fmt(nakitTotal); }
+  const nakitSub=document.getElementById("k-nakit-sub");
+  if(nakitSub) nakitSub.textContent=(nakitHareketler||[]).length+" hareket · Tıkla → Detay";
   const netSub=document.getElementById("k-net-sub");
   if(netSub) netSub.textContent="Gelir - Bonus - Gider";
   renderExpenseDist(totalExpense);
@@ -2441,14 +2487,14 @@ function updateKasaMetrics(){
     if(filterType&&filterType!=="gider"&&filterType!=="tahsilat") txRows=txRows.filter(t=>t.type===filterType||(filterType==="Shopier"&&t.user_name==="shopier-bot"));
     if(filterType==="gider"||filterType==="tahsilat") txRows=[];
     if(filterFrom||filterTo) txRows=txRows.filter(t=>inDateRange(t.created_at||t.date));
-    rows=txRows.map(t=>"<tr><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+t.date+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td></tr>");
+    rows=txRows.map(t=>"<tr><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+t.date+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td><td><button onclick='deleteTx(\""+t.id+"\",\""+t.cust_id+"\","+t.amount+","+t.bonus+")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>");
   }
   if(tab==="all"||tab==="gider"||tab==="shopier"){
     let expRows=filteredExp;
     if(q) expRows=expRows.filter(e=>(e.note||"").toLowerCase().includes(q)||(e.type||"").toLowerCase().includes(q));
     if(filterType&&filterType!=="gider"&&filterType!=="tahsilat") expRows=[];
     if(filterFrom||filterTo) expRows=expRows.filter(e=>inDateRange(e.created_at||e.date));
-    rows=rows.concat(expRows.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+e.date+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td></tr>"));
+    rows=rows.concat(expRows.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+e.date+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td><td><button onclick='deleteExpense(\""+e.id+"\")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>"));
   }
   // shopier_collections verilerini SADECE all sekmesine ekle
   if(tab==="all" && (!filterType||filterType==="tahsilat") && shopierCollections && shopierCollections.length){
@@ -2471,6 +2517,141 @@ function updateKasaMetrics(){
   if(document.getElementById("kasa-table-count")) document.getElementById("kasa-table-count").textContent=kasa_total+" kayıt";
   document.getElementById("no-kasa").style.display=kasa_total?"none":"block";
   document.getElementById("kasa-body").innerHTML=rows.join("");
+}
+
+// ============================================================
+// İŞLEM SİLME
+// ============================================================
+async function deleteTx(txId, custId, amount, bonus){
+  if(!confirm("Bu işlemi silmek istediğinize emin misiniz?\nÜye bakiyesinden "+fmt(amount+bonus)+" düşülecek.")) return;
+  showLoading(true);
+  // Cancelled yap
+  await db.from("transactions").update({cancelled:true}).eq("id",txId);
+  // Üye bakiyesini düş
+  const cust = customers.find(c=>c.id===custId);
+  if(cust){
+    const newBal = Math.max(0,(cust.balance||0)-(amount+bonus));
+    await db.from("customers").update({balance:newBal}).eq("id",custId);
+    await db.from("balance_history").insert({
+      cust_id:custId, cust_name:cust.name,
+      old_balance:cust.balance, new_balance:newBal,
+      change_amount:-(amount+bonus),
+      reason:"Kasa işlemi silindi", user_name:currentUser
+    });
+    cust.balance = newBal;
+  }
+  // Local güncelle
+  const tx = transactions.find(t=>t.id===txId);
+  if(tx) tx.cancelled=true;
+  addLog("delete","Kasa işlemi silindi",txId);
+  showLoading(false);
+  updateKasaMetrics();
+  renderCustomers();
+  showToast("✅ İşlem silindi, bakiye güncellendi.");
+}
+
+async function deleteExpense(expId){
+  if(!confirm("Bu gideri silmek istediğinize emin misiniz?")) return;
+  showLoading(true);
+  await db.from("expenses").delete().eq("id",expId);
+  expenses = expenses.filter(e=>e.id!==expId);
+  addLog("delete","Gider silindi",expId);
+  showLoading(false);
+  updateKasaMetrics();
+  showToast("✅ Gider silindi.");
+}
+
+// ============================================================
+// NAKİT KASA
+// ============================================================
+let nakitHareketler = [];
+
+async function loadNakitKasa(){
+  // balance_history veya ayrı bir "nakit_kasa" mantığı — expenses tablosunda type="Nakit Kasa" olarak tutuyoruz
+  const {data} = await db.from("expenses").select("*").in("type",["Shopier Ödemesi","Nakit Kasa","Havale Nakit","Kripto Nakit","Nakit Giriş","Diğer Nakit"]).order("created_at",{ascending:false});
+  // Gelir olarak işaretlenenler (amount negatif = nakit giriş, pozitif = gider)
+  // Nakit kasa için ayrı bir sistem: sms_logs tablosunu değil, expenses'a negatif tutar olarak eklemeyeceğiz
+  // Bunun yerine Supabase'de "nakit_kasa" tablosu gibi davranacak şekilde logs tablosunu kullanıyoruz
+  const {data:nakitData} = await db.from("logs").select("*").eq("action","nakit").order("created_at",{ascending:false}).limit(50);
+  nakitHareketler = nakitData||[];
+  updateNakitUI();
+}
+
+function updateNakitUI(){
+  const total = nakitHareketler.reduce((s,n)=>s+(n.amount||0),0);
+  const el = document.getElementById("k-nakit");
+  if(el) el.textContent = fmt(total);
+  const sub = document.getElementById("k-nakit-sub");
+  if(sub) sub.textContent = nakitHareketler.length+" hareket";
+
+  // Shopier bekleyen
+  const today2 = new Date(); today2.setHours(0,0,0,0);
+  const upcoming = (shopierCollections||[]).filter(r=>{
+    if(!r.planned_date) return false;
+    const p=r.planned_date.trim().split(/[\/\-]/);
+    if(p.length!==3) return false;
+    const d=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);
+    return d>=today2;
+  });
+  const upcomingAmt = upcoming.reduce((s,r)=>s+(r.collection||0),0);
+  const el2=document.getElementById("nk-shopier-pending");
+  if(el2) el2.textContent=fmt(upcomingAmt);
+  const nextDates=upcoming.map(r=>{const p=r.planned_date.trim().split(/[\/\-]/);return p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);}).filter(Boolean).sort((a,b)=>a-b);
+  const el3=document.getElementById("nk-shopier-date");
+  if(el3) el3.textContent=nextDates[0]?nextDates[0].toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})+"'de gelecek":"Planlanan yok";
+}
+
+async function openNakitKasa(){
+  document.getElementById("nakit-overlay").style.display="flex";
+  if(!nakitHareketler.length) await loadNakitKasa();
+  else updateNakitUI();
+  // Liste render
+  const list=document.getElementById("nk-list");
+  if(list){
+    list.innerHTML=nakitHareketler.length?nakitHareketler.map(n=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600">${n.target||n.detail||"—"}</div>
+          <div style="font-size:10px;color:var(--text3)">${n.ts||""} · ${n.user_name||""}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(n.amount||0)}</div>
+      </div>`).join(""):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Henüz nakit hareketi yok.</div>';
+  }
+}
+
+async function addNakitGiris(){
+  const amount=parseFloat(document.getElementById("nk-amount").value)||0;
+  const desc=document.getElementById("nk-desc").value.trim();
+  const type=document.getElementById("nk-type").value;
+  if(!amount||!desc){showToast("⚠️ Tutar ve açıklama zorunlu.");return;}
+  showLoading(true);
+  const ts=new Date().toLocaleString("tr-TR");
+  const {data}=await db.from("logs").insert({action:"nakit",detail:type+": "+desc,target:desc,user_name:currentUser,ts,amount}).select();
+  if(data&&data[0]) nakitHareketler.unshift(data[0]);
+  document.getElementById("nk-amount").value="";
+  document.getElementById("nk-desc").value="";
+  addLog("add","Nakit kasa girişi: "+fmt(amount),desc);
+  showLoading(false);
+  openNakitKasa();
+  showToast("✅ Nakit kasa güncellendi!");
+}
+
+async function shopierToNakit(){
+  const pendingEl=document.getElementById("nk-shopier-pending");
+  const amt=pendingEl?parseFloat(pendingEl.textContent.replace(/[₺.,]/g,"").replace(",","."))||0:0;
+  if(!amt){showToast("⚠️ Bekleyen Shopier ödemesi yok.");return;}
+  if(!confirm("₺"+amt.toLocaleString("tr-TR")+" tutarındaki Shopier ödemesini nakit kasaya aktaracaksınız. Onaylıyor musunuz?")) return;
+  showLoading(true);
+  const ts=new Date().toLocaleString("tr-TR");
+  const desc="Shopier Çarşamba Ödemesi - "+new Date().toLocaleDateString("tr-TR");
+  const {data}=await db.from("logs").insert({action:"nakit",detail:"Shopier Ödemesi: "+desc,target:desc,user_name:currentUser,ts,amount:amt}).select();
+  if(data&&data[0]) nakitHareketler.unshift(data[0]);
+  // Telegram bildirimi
+  await sendTelegram(`💵 <b>Shopier → Nakit Kasa</b>\n💰 Aktarılan: <b>${fmt(amt)}</b>\n📅 ${ts}\n👤 ${currentUser}`);
+  addLog("add","Shopier nakite aktarıldı: "+fmt(amt),desc);
+  showLoading(false);
+  openNakitKasa();
+  showToast("✅ Shopier ödemesi nakit kasaya aktarıldı!");
 }
 
 function clearKasaFilters(){
