@@ -270,7 +270,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 </head>
 <body>
 
-<div id="loading-overlay" class="loading-overlay">
+<div id="loading-overlay" class="loading-overlay" style="display:none">
   <div class="loading-spinner"></div>
   <div class="loading-text">Yükleniyor...</div>
 </div>
@@ -280,7 +280,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 </div>
 
 <!-- LOGIN -->
-<div id="login-screen" class="login-wrap hidden">
+<div id="login-screen" class="login-wrap">
   <div class="login-box">
     <div class="login-logo">
       <div class="login-logo-icon"><i class="ti ti-message-2" style="color:#fff;font-size:22px"></i></div>
@@ -3458,7 +3458,30 @@ function applyTheme(){
 }
 
 // ============================================================
+// BAŞLANGIÇ
 // ============================================================
+document.addEventListener("DOMContentLoaded", async ()=>{
+  applyTheme();
+  const savedUser = localStorage.getItem("esms_user");
+  const loginTime = parseInt(localStorage.getItem("esms_login_time")||"0");
+  if(savedUser && USERS[savedUser] && (Date.now()-loginTime < 30*60*1000)){
+    currentUser = savedUser;
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    document.getElementById("current-user-label").textContent = savedUser;
+    const av = document.getElementById("user-avatar");
+    av.textContent = USERS[savedUser].initials;
+    av.style.background = USERS[savedUser].avatarBg;
+    await loadAll();
+    startSessionTimer();
+    initDash();
+    scheduleNightReport();
+  } else {
+    localStorage.removeItem("esms_user");
+    localStorage.removeItem("esms_login_time");
+    showLoading(false);
+  }
+});
 </script>
 </body>
 </html>
