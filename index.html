@@ -345,6 +345,10 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <i class="ti ti-file-spreadsheet" style="font-size:16px"></i>
       <span>Excel güncelle</span>
     </button>
+    <button onclick="showPage('raporlar',this)">
+      <i class="ti ti-chart-bar" style="font-size:16px"></i>
+      <span>Raporlar</span>
+    </button>
     <button onclick="showPage('log',this)">
       <i class="ti ti-list-details" style="font-size:16px"></i>
       <span>Log</span>
@@ -1036,6 +1040,55 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
   </div>
 </div>
 
+  <!-- RAPORLAR -->
+  <div id="page-raporlar" class="page">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
+      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-calendar-stats" style="color:var(--purple)"></i>En iyi gün</div><div class="val" id="rpr-best-day" style="font-size:15px;color:var(--purple)">—</div><div class="sub" id="rpr-best-day-amt"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-clock" style="color:var(--warning)"></i>En yoğun saat</div><div class="val" id="rpr-best-hour" style="font-size:15px;color:var(--warning)">—</div><div class="sub" id="rpr-best-hour-cnt"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-trending-up" style="color:var(--success)"></i>En iyi hafta günü</div><div class="val" id="rpr-best-weekday" style="font-size:15px;color:var(--success)">—</div><div class="sub" id="rpr-best-weekday-amt"></div></div>
+      <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--info)"></i>En sadık üye</div><div class="val" id="rpr-top-member" style="font-size:13px;color:var(--info)">—</div><div class="sub" id="rpr-top-member-amt"></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <!-- Hafta günleri analizi -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar-week"></i>Haftanın en çok yüklenen günleri</div></div>
+        <div id="rpr-weekday-chart" style="position:relative;height:200px"><canvas id="rpr-weekday-canvas"></canvas></div>
+      </div>
+      <!-- Saatlik yoğunluk -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-clock"></i>Saatlik yoğunluk & ciro</div></div>
+        <div id="rpr-hour-chart" style="position:relative;height:200px"><canvas id="rpr-hour-canvas"></canvas></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <!-- Yöntem trendi -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-chart-pie-2"></i>Yöntem bazlı ciro dağılımı</div></div>
+        <div id="rpr-method-dist"></div>
+      </div>
+      <!-- Aylık karşılaştırma -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-calendar-month"></i>Son 6 ay karşılaştırması</div></div>
+        <div style="position:relative;height:200px"><canvas id="rpr-monthly-canvas"></canvas></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <!-- Üye segmentasyonu -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-users-group"></i>Üye segmentasyonu</div></div>
+        <div id="rpr-member-seg" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+      <!-- Bonus analizi -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="card-title-left"><i class="ti ti-gift"></i>Bonus analizi</div></div>
+        <div id="rpr-bonus-analysis" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+  </div>
+
 <script>
 // ============================================================
 // SUPABASE BAĞLANTISI
@@ -1326,6 +1379,7 @@ function showPage(id,btn){
     setTimeout(()=>{renderChart();updateKasaMetrics();},50);
   }
   if(id==="top10") renderTop10();
+  if(id==="raporlar") renderRaporlar();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
 
@@ -2317,9 +2371,18 @@ function updateKasaMetrics(){
     if(q) scFiltered=scFiltered.filter(r=>(r.cust_name||r.customer_name||"").toLowerCase().includes(q));
     if(filterFrom||filterTo) scFiltered=scFiltered.filter(r=>inDateRange(r.payment_date||r.order_date));
     const colRows = scFiltered.map(r=>{
-      const tarih = (r.payment_date||r.order_date||"—").substring(0,10);
+      const rawTarih = r.payment_date||r.order_date||"";
+      const tarihStr = rawTarih.substring(0,10);
+      // Gün hesapla
+      let gunStr = "";
+      if(rawTarih){
+        const p=rawTarih.trim().split(/[\/\-]/);
+        let d=null;
+        if(p.length===3) d=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);
+        if(d&&!isNaN(d)) gunStr=" <span style='color:var(--success);font-size:10px;font-weight:600'>"+["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"][d.getDay()]+"</span>";
+      }
       const musteri = r.cust_name || r.customer_name || "—";
-      return "<tr style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td style='color:var(--text3)'>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarih+"</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
+      return "<tr style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td style='color:var(--text3)'>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarihStr+gunStr+"</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
     });
     rows=rows.concat(colRows);
   } else if(tab==="all" && (!shopierCollections||!shopierCollections.length)){
@@ -3048,6 +3111,159 @@ function updateXLStats(){
   const lastLog=logs.find(l=>l.action==="import");
   document.getElementById("xl-stat-date").textContent=lastLog?lastLog.ts.split(" ")[0]:"—";
   document.getElementById("xl-stat-user").textContent=lastLog?lastLog.user_name:"—";
+}
+
+// ============================================================
+// RAPORLAR
+// ============================================================
+let rprWeekChart=null, rprHourChart=null, rprMonthChart=null;
+
+function renderRaporlar(){
+  const active=transactions.filter(t=>!t.cancelled);
+  const GUNLER=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
+  const $=id=>document.getElementById(id);
+
+  const getTxDate=t=>{
+    if(t.created_at){const d=new Date(t.created_at);if(!isNaN(d))return d;}
+    if(t.date){const p=t.date.split(".");if(p.length===3)return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}
+    return null;
+  };
+
+  // ── Hafta günleri analizi ─────────────────────────────────
+  const weekdayAmt=Array(7).fill(0), weekdayCnt=Array(7).fill(0);
+  active.forEach(t=>{const d=getTxDate(t);if(d){weekdayAmt[d.getDay()]+=t.amount;weekdayCnt[d.getDay()]++;}});
+  const bestWdIdx=weekdayAmt.indexOf(Math.max(...weekdayAmt));
+  if($("rpr-best-weekday")) $("rpr-best-weekday").textContent=GUNLER[bestWdIdx];
+  if($("rpr-best-weekday-amt")) $("rpr-best-weekday-amt").textContent=fmt(weekdayAmt[bestWdIdx])+" gelir";
+
+  const wCtx=$("rpr-weekday-canvas");
+  if(wCtx){
+    if(rprWeekChart) rprWeekChart.destroy();
+    rprWeekChart=new Chart(wCtx,{
+      type:"bar",
+      data:{labels:GUNLER,datasets:[
+        {label:"Ciro (₺)",data:weekdayAmt,backgroundColor:weekdayAmt.map((_,i)=>i===bestWdIdx?"rgba(139,92,246,.85)":"rgba(139,92,246,.35)"),borderRadius:6,yAxisID:"y"},
+        {label:"İşlem",data:weekdayCnt,type:"line",borderColor:"#f59e0b",backgroundColor:"transparent",borderWidth:2,pointRadius:3,pointBackgroundColor:"#f59e0b",tension:0.4,yAxisID:"y2"}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:"top",labels:{color:"#9090b0",font:{size:10},boxWidth:10}}},
+        scales:{
+          y:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:9},callback:v=>v>=1000?"₺"+Math.round(v/1000)+"K":"₺"+v}},
+          y2:{position:"right",grid:{display:false},ticks:{color:"#f59e0b",font:{size:9}}}
+        }
+      }
+    });
+  }
+
+  // ── Saatlik yoğunluk ──────────────────────────────────────
+  const hourAmt=Array(24).fill(0),hourCnt=Array(24).fill(0);
+  active.forEach(t=>{const d=getTxDate(t);if(d&&t.created_at){hourAmt[d.getHours()]+=t.amount;hourCnt[d.getHours()]++;}});
+  const bestHour=hourAmt.indexOf(Math.max(...hourAmt));
+  const bestHourCnt=hourCnt.indexOf(Math.max(...hourCnt));
+  if($("rpr-best-hour")) $("rpr-best-hour").textContent=String(bestHour).padStart(2,"0")+":00";
+  if($("rpr-best-hour-cnt")) $("rpr-best-hour-cnt").textContent=fmt(hourAmt[bestHour])+" · "+hourCnt[bestHour]+" işlem";
+
+  const hCtx=$("rpr-hour-canvas");
+  if(hCtx){
+    if(rprHourChart) rprHourChart.destroy();
+    rprHourChart=new Chart(hCtx,{
+      type:"bar",
+      data:{labels:Array.from({length:24},(_,i)=>String(i).padStart(2,"0")+":00"),datasets:[
+        {label:"Ciro",data:hourAmt,backgroundColor:hourAmt.map((_,i)=>i===bestHour?"rgba(16,185,129,.85)":"rgba(16,185,129,.35)"),borderRadius:4,yAxisID:"y"},
+        {label:"İşlem",data:hourCnt,type:"line",borderColor:"#ec4899",backgroundColor:"transparent",borderWidth:2,pointRadius:2,tension:0.4,yAxisID:"y2"}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:"top",labels:{color:"#9090b0",font:{size:10},boxWidth:10}}},
+        scales:{
+          y:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:9},callback:v=>v>=1000?"₺"+Math.round(v/1000)+"K":"₺"+v}},
+          y2:{position:"right",grid:{display:false},ticks:{color:"#ec4899",font:{size:9}}}
+        }
+      }
+    });
+  }
+
+  // ── En iyi gün (tarih bazlı) ──────────────────────────────
+  const dayMap={};
+  active.forEach(t=>{const d=getTxDate(t);if(d){const k=d.toLocaleDateString("tr-TR");if(!dayMap[k])dayMap[k]={amt:0,cnt:0,gun:GUNLER[d.getDay()]};dayMap[k].amt+=t.amount;dayMap[k].cnt++;}});
+  const bestDay=Object.entries(dayMap).sort((a,b)=>b[1].amt-a[1].amt)[0];
+  if(bestDay&&$("rpr-best-day")) $("rpr-best-day").textContent=bestDay[0]+" "+bestDay[1].gun;
+  if(bestDay&&$("rpr-best-day-amt")) $("rpr-best-day-amt").textContent=fmt(bestDay[1].amt)+" · "+bestDay[1].cnt+" işlem";
+
+  // ── En sadık üye ──────────────────────────────────────────
+  const memberMap={};
+  active.forEach(t=>{if(!memberMap[t.cust_id])memberMap[t.cust_id]={name:t.cust_name,total:0,cnt:0};memberMap[t.cust_id].total+=t.amount;memberMap[t.cust_id].cnt++;});
+  const topMember=Object.values(memberMap).sort((a,b)=>b.total-a.total)[0];
+  if(topMember&&$("rpr-top-member")) $("rpr-top-member").textContent=topMember.name;
+  if(topMember&&$("rpr-top-member-amt")) $("rpr-top-member-amt").textContent=fmt(topMember.total)+" · "+topMember.cnt+" işlem";
+
+  // ── Yöntem bazlı dağılım ──────────────────────────────────
+  const methodMap={"Havale":0,"Shopier":0,"Kripto":0};
+  active.forEach(t=>{if(methodMap[t.type]!==undefined)methodMap[t.type]+=t.amount;});
+  const totalAmt=Object.values(methodMap).reduce((s,v)=>s+v,0)||1;
+  const mColors={"Havale":"#3b82f6","Shopier":"#10b981","Kripto":"#f59e0b"};
+  const mIcons={"Havale":"ti-building-bank","Shopier":"ti-brand-shopee","Kripto":"ti-currency-bitcoin"};
+  if($("rpr-method-dist")) $("rpr-method-dist").innerHTML=Object.entries(methodMap).map(([m,v])=>{
+    const pct=Math.round((v/totalAmt)*100);
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><i class="ti ${mIcons[m]}" style="color:${mColors[m]}"></i>${m}</div>
+        <div style="font-size:12px;color:var(--text2)">${fmt(v)} <span style="color:${mColors[m]};font-weight:700">${pct}%</span></div>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px">
+        <div style="height:8px;width:${pct}%;background:${mColors[m]};border-radius:4px;transition:width .5s"></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // ── Son 6 ay karşılaştırması ──────────────────────────────
+  const now2=new Date();
+  const monthLabels=[],monthData=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now2.getFullYear(),now2.getMonth()-i,1);
+    monthLabels.push(d.toLocaleDateString("tr-TR",{month:"short",year:"2-digit"}));
+    monthData.push(active.filter(t=>{const td=getTxDate(t);return td&&td.getFullYear()===d.getFullYear()&&td.getMonth()===d.getMonth();}).reduce((s,t)=>s+t.amount,0));
+  }
+  const mxAmt=Math.max(...monthData)||1;
+  const mCtx=$("rpr-monthly-canvas");
+  if(mCtx){
+    if(rprMonthChart) rprMonthChart.destroy();
+    rprMonthChart=new Chart(mCtx,{
+      type:"line",
+      data:{labels:monthLabels,datasets:[{label:"Aylık gelir",data:monthData,borderColor:"#8b5cf6",backgroundColor:"rgba(139,92,246,.1)",borderWidth:2.5,pointRadius:5,pointBackgroundColor:"#8b5cf6",tension:0.4,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"rgba(22,22,42,.95)",callbacks:{label:c=>"₺"+Math.round(c.parsed.y).toLocaleString("tr-TR")}}},
+        scales:{x:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:10}}},y:{grid:{color:"rgba(255,255,255,.04)"},ticks:{color:"#5a5a7a",font:{size:10},callback:v=>"₺"+Math.round(v/1000)+"K"}}}
+      }
+    });
+  }
+
+  // ── Üye segmentasyonu ─────────────────────────────────────
+  const segs=[
+    {label:"Balina (₺5000+)",min:5000,max:Infinity,color:"#8b5cf6"},
+    {label:"Aktif (₺1000-4999)",min:1000,max:4999,color:"#3b82f6"},
+    {label:"Orta (₺100-999)",min:100,max:999,color:"#10b981"},
+    {label:"Düşük (₺1-99)",min:1,max:99,color:"#f59e0b"},
+    {label:"Sıfır bakiye",min:0,max:0,color:"#ef4444"},
+  ];
+  const segData=segs.map(s=>({...s,cnt:customers.filter(c=>{const b=c.balance||0;return b>=s.min&&b<=s.max;}).length}));
+  const totalMembers=customers.length||1;
+  if($("rpr-member-seg")) $("rpr-member-seg").innerHTML=segData.map(s=>{
+    const pct=Math.round((s.cnt/totalMembers)*100);
+    return `<div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--text2)">${s.label}</span><span style="font-size:11px;font-weight:600;color:${s.color}">${s.cnt} üye ${pct}%</span></div><div style="height:6px;background:var(--border);border-radius:3px"><div style="height:6px;width:${pct}%;background:${s.color};border-radius:3px;transition:width .5s"></div></div></div>`;
+  }).join("");
+
+  // ── Bonus analizi ─────────────────────────────────────────
+  const bonusTx=active.filter(t=>t.bonus>0);
+  const totalBonus3=bonusTx.reduce((s,t)=>s+t.bonus,0);
+  const totalInc3=active.reduce((s,t)=>s+t.amount,0)||1;
+  const bonusRate=((totalBonus3/totalInc3)*100).toFixed(1);
+  const bonusByType={};
+  bonusTx.forEach(t=>{if(!bonusByType[t.type])bonusByType[t.type]={bonus:0,cnt:0};bonusByType[t.type].bonus+=t.bonus;bonusByType[t.type].cnt++;});
+  if($("rpr-bonus-analysis")) $("rpr-bonus-analysis").innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="background:var(--card2);border-radius:9px;padding:9px"><div style="font-size:10px;color:var(--text2)">Toplam bonus</div><div style="font-size:14px;font-weight:700;color:var(--warning)">${fmt(totalBonus3)}</div></div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px"><div style="font-size:10px;color:var(--text2)">Bonus / Gelir oranı</div><div style="font-size:14px;font-weight:700;color:var(--warning)">%${bonusRate}</div></div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px"><div style="font-size:10px;color:var(--text2)">Bonuslu işlem</div><div style="font-size:14px;font-weight:700;color:var(--purple)">${bonusTx.length}</div></div>
+      <div style="background:var(--card2);border-radius:9px;padding:9px"><div style="font-size:10px;color:var(--text2)">Ort. bonus/işlem</div><div style="font-size:14px;font-weight:700;color:var(--purple)">${bonusTx.length?fmt(totalBonus3/bonusTx.length):"₺0"}</div></div>
+    </div>
+    ${Object.entries(bonusByType).map(([type,d])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text2)">${type}</span><span style="font-weight:700;color:var(--warning)">${fmt(d.bonus)} <span style="color:var(--text3);font-weight:400">(${d.cnt} işlem)</span></span></div>`).join("")}`;
 }
 
 // ============================================================
