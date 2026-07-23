@@ -147,6 +147,7 @@ tr:hover td{background:var(--card2)}
 .chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all .2s}
 .chip.active{background:rgba(139,92,246,.2);border-color:var(--purple);color:var(--purple)}
 .timeout-warning{position:fixed;bottom:20px;right:20px;background:var(--card2);border:1px solid rgba(245,158,11,.4);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--warning);z-index:999;display:none;box-shadow:0 0 20px rgba(0,0,0,.5)}
+.aktarim-hedef-btn{transition:all .2s}.aktarim-hedef-btn.secili{border-color:var(--purple)!important;background:rgba(139,92,246,.15)!important;color:var(--text)!important}.aktarim-hedef-btn:hover{border-color:var(--purple)!important;color:var(--text)!important}
 .loading-overlay{position:fixed;inset:0;background:rgba(13,13,20,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px}
 .loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -634,27 +635,127 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <div class="metric"><div class="lbl"><i class="ti ti-arrow-down-circle" style="color:var(--danger)"></i>Toplam gider</div><div class="val kval-expense" id="k-expense">₺0</div><div class="sub" id="k-expense-sub"></div></div>
       <div class="metric"><div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div><div class="val kval-bonus" id="k-bonus">₺0</div><div class="sub" id="k-bonus-sub"></div></div>
     </div>
-    <div class="metric-top-bar" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
-      <div class="metric"><div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--warning)"></i>Shopier komisyonu</div><div class="val" id="k-komisyon" style="color:var(--warning)">₺0</div><div class="sub" id="k-komisyon-sub"></div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-users" style="color:var(--purple)"></i>İşlem yapan üye</div><div class="val" id="k-uye-count" style="color:var(--purple)">0</div><div class="sub" id="k-uye-sub"></div></div>
-      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-scale"></i>Net kasa</div><div class="val" id="k-net">₺0</div><div class="sub" id="k-net-sub"></div></div>
-      <div class="metric" style="border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.06);cursor:pointer" onclick="openNakitKasa()">
+    <div class="metric-top-bar" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
+
+      <!-- Shopier Net -->
+      <div class="metric" style="border:1px solid rgba(16,185,129,.3);background:rgba(16,185,129,.05);position:relative">
+        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier (net)</div>
+        <div class="val" id="k-shopier-net" style="color:var(--success)">₺0</div>
+        <div class="sub" id="k-shopier-net-sub"></div>
+        <div style="display:flex;gap:5px;margin-top:8px">
+          <button onclick="openAktarimModal('shopier')" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.1);color:var(--success);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:600">
+            <i class="ti ti-arrows-transfer-down"></i> Aktar
+          </button>
+        </div>
+      </div>
+
+      <!-- Nakit Kasa -->
+      <div class="metric" style="border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.05);position:relative">
         <div class="lbl"><i class="ti ti-cash" style="color:var(--success)"></i>Nakit kasa</div>
         <div class="val" id="k-nakit" style="color:var(--success)">₺0</div>
-        <div class="sub" id="k-nakit-sub" style="color:var(--success)">Tıkla → Detay</div>
+        <div class="sub" id="k-nakit-sub"></div>
+        <div style="display:flex;gap:5px;margin-top:8px">
+          <button onclick="openNakitDuzenle()" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">
+            <i class="ti ti-edit"></i> Düzenle
+          </button>
+          <button onclick="openAktarimModal('nakit')" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:var(--success);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:600">
+            <i class="ti ti-arrows-transfer-down"></i> Aktar
+          </button>
+        </div>
+      </div>
+
+      <!-- Kripto -->
+      <div class="metric" style="border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.05);position:relative">
+        <div class="lbl"><i class="ti ti-currency-bitcoin" style="color:var(--warning)"></i>Kripto</div>
+        <div class="val" id="k-kripto" style="color:var(--warning)">₺0</div>
+        <div class="sub" id="k-kripto-sub"></div>
+        <div style="display:flex;gap:5px;margin-top:8px">
+          <button onclick="openAktarimModal('kripto')" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--warning);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:600">
+            <i class="ti ti-arrows-transfer-down"></i> Aktar
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- AKTARIM MODALI -->
+    <div id="aktarim-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
+      <div class="modal" style="max-width:460px">
+        <div class="modal-hdr"><h3 id="aktarim-title">Aktarım</h3><button onclick="document.getElementById('aktarim-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
+
+        <!-- Kaynak bilgisi -->
+        <div id="aktarim-kaynak-info" style="padding:12px;background:var(--card2);border-radius:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--text2)" id="aktarim-kaynak-label">Kaynak</span>
+          <span style="font-size:16px;font-weight:700;color:var(--success)" id="aktarim-kaynak-tutar">₺0</span>
+        </div>
+
+        <!-- Tutar -->
+        <div class="frow" style="margin-bottom:10px">
+          <label>Aktarılacak tutar (₺)</label>
+          <input type="number" id="aktarim-tutar" placeholder="0" min="0" step="0.01" style="font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);width:100%" oninput="updateAktarimOnay()">
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button onclick="aktarimTumunu()" style="font-size:11px;padding:4px 10px;border-radius:7px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:var(--purple);cursor:pointer">Tamamını aktar</button>
+          </div>
+        </div>
+
+        <!-- Hedef seçimi -->
+        <div class="frow" style="margin-bottom:12px">
+          <label>Nereye aktarılacak?</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px" id="aktarim-hedefler">
+            <button onclick="secAktarimHedef('jordan',this)" class="aktarim-hedef-btn" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text2);cursor:pointer;text-align:left;font-size:12px">
+              <div style="font-size:16px;margin-bottom:4px">👤</div>
+              <div style="font-weight:600">Jordan</div>
+              <div style="font-size:10px;color:var(--text3)">Kişisel aktarım</div>
+            </button>
+            <button onclick="secAktarimHedef('brad',this)" class="aktarim-hedef-btn" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text2);cursor:pointer;text-align:left;font-size:12px">
+              <div style="font-size:16px;margin-bottom:4px">👤</div>
+              <div style="font-weight:600">Brad</div>
+              <div style="font-size:10px;color:var(--text3)">Kişisel aktarım</div>
+            </button>
+            <button onclick="secAktarimHedef('herosms',this)" class="aktarim-hedef-btn" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text2);cursor:pointer;text-align:left;font-size:12px">
+              <div style="font-size:16px;margin-bottom:4px">💊</div>
+              <div style="font-weight:600">Hero SMS</div>
+              <div style="font-size:10px;color:var(--text3)">API bakiyesi</div>
+            </button>
+            <button onclick="secAktarimHedef('gider',this)" class="aktarim-hedef-btn" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text2);cursor:pointer;text-align:left;font-size:12px">
+              <div style="font-size:16px;margin-bottom:4px">📉</div>
+              <div style="font-weight:600">Gider</div>
+              <div style="font-size:10px;color:var(--text3)">Masraf olarak kaydet</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Not -->
+        <div class="frow" style="margin-bottom:14px">
+          <label>Not (isteğe bağlı)</label>
+          <input type="text" id="aktarim-not" placeholder="Aktarım açıklaması..." style="font-size:12px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);width:100%">
+        </div>
+
+        <!-- Onay kutusu -->
+        <div id="aktarim-onay-box" style="display:none;padding:12px;border-radius:10px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);margin-bottom:12px;font-size:12px">
+          <div style="font-weight:700;color:var(--purple);margin-bottom:6px"><i class="ti ti-check-circle" style="margin-right:5px"></i>Aktarım özeti</div>
+          <div id="aktarim-onay-detay" style="color:var(--text2);line-height:1.8"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-save" id="aktarim-onayla-btn" onclick="aktarimOnayla()" disabled style="opacity:.4">
+            <i class="ti ti-check" style="margin-right:4px"></i>Onayla & Aktar
+          </button>
+          <button class="btn-cancel" onclick="document.getElementById('aktarim-overlay').style.display='none'">İptal</button>
+        </div>
       </div>
     </div>
 
-    <!-- NAKİT KASA MODALI -->
-    <div class="overlay-wrap" id="nakit-overlay" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
-      <div class="modal" style="max-width:520px">
-        <div class="modal-hdr"><h3>💵 Nakit Kasa</h3><button onclick="document.getElementById('nakit-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-          <div class="metric"><div class="lbl">Toplam nakit</div><div class="val" id="nk-total" style="color:var(--success)">₺0</div></div>
-          <div class="metric"><div class="lbl">Shopier bekleyen</div><div class="val" id="nk-shopier-pending" style="color:var(--warning)">₺0</div><div class="sub" id="nk-shopier-date">—</div></div>
+    <!-- NAKİT DÜZENLEME MODALI -->
+    <div id="nakit-duzenle-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
+      <div class="modal" style="max-width:460px">
+        <div class="modal-hdr"><h3>💵 Nakit Kasa Düzenle</h3><button onclick="document.getElementById('nakit-duzenle-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
+        <div style="padding:12px;background:var(--card2);border-radius:10px;margin-bottom:14px;display:flex;justify-content:space-between">
+          <span style="font-size:12px;color:var(--text2)">Mevcut nakit bakiye</span>
+          <span style="font-size:15px;font-weight:700;color:var(--success)" id="nk-mevcut-tutar">₺0</span>
         </div>
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Nakit hareketleri</div>
-        <div id="nk-list" style="max-height:200px;overflow-y:auto;margin-bottom:14px"></div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Son hareketler</div>
+        <div id="nk-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px"></div>
         <div style="border-top:1px solid var(--border);padding-top:12px">
           <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px">Nakit giriş ekle</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -666,16 +767,36 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
               <option value="Kripto">₿ Kripto</option>
               <option value="Diğer">Diğer</option>
             </select>
-            <button class="btn-save" onclick="addNakitGiris()" style="font-size:12px;padding:7px 14px"><i class="ti ti-plus"></i> Ekle</button>
+            <button class="btn-save" onclick="addNakitGirisOnayla()" style="font-size:12px;padding:7px 14px"><i class="ti ti-plus"></i> Ekle</button>
           </div>
           <div style="margin-top:10px">
             <button onclick="shopierToNakit()" style="width:100%;font-size:12px;padding:8px;border-radius:8px;border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.1);color:var(--success);cursor:pointer;font-weight:600">
-              <i class="ti ti-arrow-right-circle"></i> Shopier bekleyen tutarı nakite aktar (Çarşamba)
+              <i class="ti ti-arrow-right-circle"></i> Shopier bekleyeni nakite aktar (Çarşamba)
             </button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- AKTARIM ONAY MODALI -->
+    <div id="aktarim-onay-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.8);align-items:center;justify-content:center">
+      <div class="modal" style="max-width:400px">
+        <div style="text-align:center;margin-bottom:1.25rem">
+          <div style="width:52px;height:52px;border-radius:14px;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">
+            <i class="ti ti-arrows-transfer-down" style="font-size:24px;color:#fff"></i>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">Aktarımı Onayla</div>
+        </div>
+        <div id="aktarim-son-ozet" style="background:var(--bg2);border-radius:12px;padding:1rem;margin-bottom:1.25rem;font-size:13px;line-height:2"></div>
+        <div class="btn-row">
+          <button class="btn-save" onclick="aktarimKesinOnayla()"><i class="ti ti-check" style="margin-right:4px"></i>Evet, Aktar</button>
+          <button class="btn-cancel" onclick="document.getElementById('aktarim-onay-overlay').style.display='none'">Vazgeç</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAKİT KASA MODALI (eski, geri uyumluluk) -->
+    <div id="nakit-overlay" style="display:none"></div>
 
     <!-- ÖDEME YÖNTEMİ SEKMELERİ -->
     <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px;flex-wrap:wrap">
@@ -2281,6 +2402,34 @@ function updateKasaMetrics(){
   if(nakitEl){ nakitEl.textContent=fmt(nakitTotal); }
   const nakitSub=document.getElementById("k-nakit-sub");
   if(nakitSub) nakitSub.textContent="Nakit+Havale · Tıkla → Detay";
+  // Shopier net gelir (tahsilatlar dahil, komisyon düşülmüş)
+  const shopierBrut=active.filter(t=>t.type==="Shopier"||t.user_name==="shopier-bot").reduce((s,t)=>s+t.amount,0);
+  const shopierTahsilat=(shopierCollections||[]).reduce((s,r)=>s+(r.collection||0),0);
+  const shopierNet=shopierBrut+shopierTahsilat-shopierKomTotal;
+  const shopierNetEl=document.getElementById("k-shopier-net");
+  if(shopierNetEl) shopierNetEl.textContent=fmt(shopierNet);
+  const shopierNetSub=document.getElementById("k-shopier-net-sub");
+  if(shopierNetSub) shopierNetSub.textContent="Brüt: "+fmt(shopierBrut+shopierTahsilat)+" | Kom: -"+fmt(shopierKomTotal);
+
+  // Kripto toplam
+  const kriptoToplam=active.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
+  const kriptoEl=document.getElementById("k-kripto");
+  if(kriptoEl) kriptoEl.textContent=fmt(kriptoToplam);
+  const kriptoSub=document.getElementById("k-kripto-sub");
+  if(kriptoSub) kriptoSub.textContent=active.filter(t=>t.type==="Kripto").length+" işlem";
+
+  // Global değişkenlere aktar (aktarım modalı için)
+  window._kasaShopierNet=shopierNet;
+  window._kasaNakit=nakitTotal;
+  window._kasaKripto=kriptoToplam;
+  window._kasaShopierBekleyen=(shopierCollections||[]).filter(r=>{
+    if(!r.planned_date)return false;
+    const p=r.planned_date.trim().split(/[\/\-]/);if(p.length!==3)return false;
+    const today=new Date();today.setHours(0,0,0,0);
+    const d=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);
+    return d>=today;
+  }).reduce((s,r)=>s+(r.collection||0),0);
+
   const netSub=document.getElementById("k-net-sub");
   if(netSub) netSub.textContent="Gelir - Bonus - Gider";
   renderExpenseDist(totalExpense);
@@ -2446,8 +2595,176 @@ async function deleteExpense(expId){
 }
 
 // ============================================================
-// NAKİT KASA
+// AKTARIM SİSTEMİ
 // ============================================================
+let _aktarimKaynak = null;
+let _aktarimHedef  = null;
+
+const AKTARIM_HEDEF_LABELS = {
+  jordan: "👤 Jordan",
+  brad:   "👤 Brad",
+  herosms:"💊 Hero SMS",
+  gider:  "📉 Gider"
+};
+
+function openAktarimModal(kaynak){
+  _aktarimKaynak = kaynak;
+  _aktarimHedef  = null;
+
+  const tutar = kaynak==="shopier" ? (window._kasaShopierNet||0)
+               : kaynak==="nakit"   ? (window._kasaNakit||0)
+               :                      (window._kasaKripto||0);
+
+  const kaynakLabel = kaynak==="shopier" ? "🤖 Shopier Net"
+                    : kaynak==="nakit"   ? "💵 Nakit Kasa"
+                    :                     "₿ Kripto";
+
+  document.getElementById("aktarim-title").textContent = kaynakLabel+" → Aktarım";
+  document.getElementById("aktarim-kaynak-label").textContent = kaynakLabel;
+  document.getElementById("aktarim-kaynak-tutar").textContent = fmt(tutar);
+  document.getElementById("aktarim-tutar").value = "";
+  document.getElementById("aktarim-not").value = "";
+  document.getElementById("aktarim-onay-box").style.display="none";
+  document.getElementById("aktarim-onayla-btn").disabled=true;
+  document.getElementById("aktarim-onayla-btn").style.opacity=".4";
+  document.querySelectorAll(".aktarim-hedef-btn").forEach(b=>b.classList.remove("secili"));
+  document.getElementById("aktarim-overlay").style.display="flex";
+}
+
+function secAktarimHedef(hedef, btn){
+  _aktarimHedef = hedef;
+  document.querySelectorAll(".aktarim-hedef-btn").forEach(b=>b.classList.remove("secili"));
+  btn.classList.add("secili");
+  updateAktarimOnay();
+}
+
+function aktarimTumunu(){
+  const tutar = _aktarimKaynak==="shopier" ? (window._kasaShopierNet||0)
+              : _aktarimKaynak==="nakit"   ? (window._kasaNakit||0)
+              :                               (window._kasaKripto||0);
+  document.getElementById("aktarim-tutar").value = tutar.toFixed(2);
+  updateAktarimOnay();
+}
+
+function updateAktarimOnay(){
+  const tutar = parseFloat(document.getElementById("aktarim-tutar").value)||0;
+  const onayBox = document.getElementById("aktarim-onay-box");
+  const btn = document.getElementById("aktarim-onayla-btn");
+  if(tutar>0 && _aktarimHedef){
+    const kaynakLabel = _aktarimKaynak==="shopier"?"🤖 Shopier Net":_aktarimKaynak==="nakit"?"💵 Nakit":_aktarimKaynak==="kripto"?"₿ Kripto":"";
+    document.getElementById("aktarim-onay-detay").innerHTML =
+      `<b>Kaynak:</b> ${kaynakLabel}<br><b>Tutar:</b> ${fmt(tutar)}<br><b>Hedef:</b> ${AKTARIM_HEDEF_LABELS[_aktarimHedef]}<br><b>Not:</b> ${document.getElementById("aktarim-not").value||"—"}`;
+    onayBox.style.display="block";
+    btn.disabled=false; btn.style.opacity="1";
+  } else {
+    onayBox.style.display="none";
+    btn.disabled=true; btn.style.opacity=".4";
+  }
+}
+
+function aktarimOnayla(){
+  const tutar = parseFloat(document.getElementById("aktarim-tutar").value)||0;
+  if(!tutar||!_aktarimHedef) return;
+  const kaynakLabel = _aktarimKaynak==="shopier"?"🤖 Shopier Net":_aktarimKaynak==="nakit"?"💵 Nakit Kasa":"₿ Kripto";
+  const not = document.getElementById("aktarim-not").value||"";
+  document.getElementById("aktarim-son-ozet").innerHTML =
+    `<b>Kaynak:</b> ${kaynakLabel}<br><b>Aktarılan tutar:</b> <span style="color:var(--success);font-weight:700">${fmt(tutar)}</span><br><b>Hedef:</b> ${AKTARIM_HEDEF_LABELS[_aktarimHedef]}<br><b>Not:</b> ${not||"—"}`;
+  document.getElementById("aktarim-overlay").style.display="none";
+  document.getElementById("aktarim-onay-overlay").style.display="flex";
+}
+
+async function aktarimKesinOnayla(){
+  const tutar = parseFloat(document.getElementById("aktarim-tutar").value)||0;
+  const not   = document.getElementById("aktarim-not").value||"";
+  document.getElementById("aktarim-onay-overlay").style.display="none";
+  showLoading(true);
+
+  const kaynakLabel = _aktarimKaynak==="shopier"?"Shopier Net":_aktarimKaynak==="nakit"?"Nakit Kasa":"Kripto";
+  const hedefLabel  = AKTARIM_HEDEF_LABELS[_aktarimHedef];
+  const ts = new Date().toLocaleString("tr-TR");
+
+  // Log kaydı
+  await addLog("add", `${kaynakLabel} → ${hedefLabel}: ${fmt(tutar)}`, not||"Aktarım");
+
+  // Shopier'den aktarım yapıldıysa bekleyen sıfırla
+  if(_aktarimKaynak==="shopier"){
+    const today=new Date();today.setHours(0,0,0,0);
+    const yesterday=new Date(today);yesterday.setDate(today.getDate()-1);
+    const yStr=yesterday.getFullYear()+"-"+String(yesterday.getMonth()+1).padStart(2,"0")+"-"+String(yesterday.getDate()).padStart(2,"0");
+    const upcoming=(shopierCollections||[]).filter(r=>{
+      if(!r.planned_date)return false;
+      const p=r.planned_date.trim().split(/[\/\-]/);if(p.length!==3)return false;
+      const d=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);
+      return d>=today;
+    });
+    for(const r of upcoming){
+      await db.from("shopier_collections").update({planned_date:yStr}).eq("order_id",r.order_id);
+      r.planned_date=yStr;
+    }
+  }
+
+  // Nakit kasaya log ekle (aktarım kaydı)
+  await db.from("logs").insert({
+    action:"aktarim",
+    detail:`${kaynakLabel} → ${hedefLabel}`,
+    target:not||hedefLabel,
+    user_name:currentUser,
+    ts,
+    amount:tutar
+  });
+
+  // Telegram bildirimi
+  await sendTelegram(`💸 <b>Aktarım Yapıldı</b>\n━━━━━━━━━━━━━━\n📤 Kaynak: <b>${kaynakLabel}</b>\n💰 Tutar: <b>${fmt(tutar)}</b>\n📥 Hedef: <b>${hedefLabel}</b>\n📝 Not: ${not||"—"}\n⏰ ${ts}\n👤 ${currentUser}`);
+
+  showLoading(false);
+  updateKasaMetrics();
+  showToast(`✅ ${fmt(tutar)} → ${hedefLabel} aktarıldı!`);
+  _aktarimKaynak=null; _aktarimHedef=null;
+}
+
+// Nakit düzenleme
+function openNakitDuzenle(){
+  const nakitTop=(nakitHareketler||[]).reduce((s,n)=>s+(n.amount||0),0);
+  const havaleTop=transactions.filter(t=>!t.cancelled&&(t.type==="Havale"||t.type==="Havale/EFT")).reduce((s,t)=>s+t.amount,0);
+  const mevcut=nakitTop+havaleTop;
+  const el=document.getElementById("nk-mevcut-tutar");
+  if(el) el.textContent=fmt(mevcut);
+  const list=document.getElementById("nk-list");
+  if(list) list.innerHTML=(nakitHareketler||[]).length
+    ? (nakitHareketler||[]).slice(0,10).map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><div style="flex:1"><div style="font-size:12px;font-weight:600">${n.target||n.detail||"—"}</div><div style="font-size:10px;color:var(--text3)">${n.ts||""} · ${n.user_name||""}</div></div><div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(n.amount||0)}</div></div>`).join("")
+    : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Nakit hareketi yok.</div>';
+  document.getElementById("nakit-duzenle-overlay").style.display="flex";
+}
+
+async function addNakitGirisOnayla(){
+  const amount=parseFloat(document.getElementById("nk-amount")?.value)||0;
+  const desc=document.getElementById("nk-desc")?.value.trim();
+  const type=document.getElementById("nk-type")?.value;
+  if(!amount||!desc){showToast("⚠️ Tutar ve açıklama zorunlu.");return;}
+  // Onay ekranına git
+  const mevcut=window._kasaNakit||0;
+  document.getElementById("aktarim-son-ozet").innerHTML =
+    `<b>İşlem:</b> Nakit giriş<br><b>Tutar:</b> <span style="color:var(--success);font-weight:700">${fmt(amount)}</span><br><b>Tür:</b> ${type}<br><b>Açıklama:</b> ${desc}<br><b>Yeni bakiye:</b> ${fmt(mevcut+amount)}`;
+  document.getElementById("nakit-duzenle-overlay").style.display="none";
+  document.getElementById("aktarim-onay-overlay").style.display="flex";
+  // Onay butonunu override et
+  document.querySelector("#aktarim-onay-overlay .btn-save").onclick = async()=>{
+    document.getElementById("aktarim-onay-overlay").style.display="none";
+    showLoading(true);
+    const ts=new Date().toLocaleString("tr-TR");
+    const {data}=await db.from("logs").insert({action:"nakit",detail:type+": "+desc,target:desc,user_name:currentUser,ts,amount}).select();
+    if(data&&data[0]) nakitHareketler.unshift(data[0]);
+    await addLog("add","Nakit giriş: "+fmt(amount),desc);
+    showLoading(false);
+    updateKasaMetrics();
+    showToast("✅ Nakit kasa güncellendi!");
+    document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
+  };
+}
+
+// Geriye uyumluluk
+function openNakitKasa(){ openNakitDuzenle(); }
+async function addNakitGiris(){ await addNakitGirisOnayla(); }
 let nakitHareketler = [];
 
 async function loadNakitKasa(){
