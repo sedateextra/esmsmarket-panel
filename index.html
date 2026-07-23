@@ -1030,7 +1030,10 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
   </div>
 
     <div class="card">
-      <div class="card-title"><div class="card-title-left"><i class="ti ti-list-details"></i>İşlem logu</div></div>
+      <div class="card-title"><div class="card-title-left"><i class="ti ti-list-details"></i>İşlem logu</div><span id="log-count" class="tbadge"></span></div>
+      <div class="srow" style="margin-bottom:10px">
+        <input type="text" id="log-search" placeholder="Kullanıcı veya detay ara..." oninput="renderLog()">
+      </div>
       <table><colgroup><col style="width:15%"><col style="width:11%"><col style="width:11%"><col style="width:32%"><col style="width:18%"><col style="width:13%"></colgroup>
         <thead><tr><th>Tarih / Saat</th><th>Kullanıcı</th><th>İşlem</th><th>Detay</th><th>Hedef</th><th></th></tr></thead>
         <tbody id="log-body"></tbody>
@@ -1039,6 +1042,22 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 </div>
+
+  <!-- LOG -->
+  <div id="page-log" class="page">
+    <div class="srow" style="margin-bottom:10px">
+      <input type="text" id="log-search" placeholder="Kullanıcı veya detay ara..." oninput="renderLog()">
+      <span id="log-count" class="tbadge" style="margin-left:auto"></span>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-left"><i class="ti ti-list-details"></i>İşlem logu</div></div>
+      <table><colgroup><col style="width:15%"><col style="width:11%"><col style="width:11%"><col style="width:32%"><col style="width:18%"><col style="width:13%"></colgroup>
+        <thead><tr><th>Tarih / Saat</th><th>Kullanıcı</th><th>İşlem</th><th>Detay</th><th>Hedef</th><th></th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+      <div id="no-log" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz log yok.</div>
+    </div>
+  </div>
 
   <!-- RAPORLAR -->
   <div id="page-raporlar" class="page">
@@ -3120,6 +3139,14 @@ let rprWeekChart=null, rprHourChart=null, rprMonthChart=null;
 
 function renderRaporlar(){
   const active=transactions.filter(t=>!t.cancelled);
+  // Shopier tahsilatlarını da ekle
+  const scItems=(shopierCollections||[]).map(r=>{
+    const raw=r.payment_date||r.order_date||"";
+    let ca=null;
+    if(raw){const p=raw.trim().split(/[\/\-]/);if(p.length===3)ca=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);}
+    return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:ca?ca.toISOString():null,date:raw.substring(0,10),cust_name:r.cust_name||r.customer_name||"Shopier",bonus:0};
+  });
+  const allItems=[...active,...scItems];
   const GUNLER=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
   const $=id=>document.getElementById(id);
 
@@ -3131,7 +3158,7 @@ function renderRaporlar(){
 
   // ── Hafta günleri analizi ─────────────────────────────────
   const weekdayAmt=Array(7).fill(0), weekdayCnt=Array(7).fill(0);
-  active.forEach(t=>{const d=getTxDate(t);if(d){weekdayAmt[d.getDay()]+=t.amount;weekdayCnt[d.getDay()]++;}});
+  allItems.forEach(t=>{const d=getTxDate(t);if(d){weekdayAmt[d.getDay()]+=t.amount;weekdayCnt[d.getDay()]++;}});
   const bestWdIdx=weekdayAmt.indexOf(Math.max(...weekdayAmt));
   if($("rpr-best-weekday")) $("rpr-best-weekday").textContent=GUNLER[bestWdIdx];
   if($("rpr-best-weekday-amt")) $("rpr-best-weekday-amt").textContent=fmt(weekdayAmt[bestWdIdx])+" gelir";
@@ -3156,7 +3183,7 @@ function renderRaporlar(){
 
   // ── Saatlik yoğunluk ──────────────────────────────────────
   const hourAmt=Array(24).fill(0),hourCnt=Array(24).fill(0);
-  active.forEach(t=>{const d=getTxDate(t);if(d&&t.created_at){hourAmt[d.getHours()]+=t.amount;hourCnt[d.getHours()]++;}});
+  allItems.forEach(t=>{const d=getTxDate(t);if(d&&t.created_at){hourAmt[d.getHours()]+=t.amount;hourCnt[d.getHours()]++;}});
   const bestHour=hourAmt.indexOf(Math.max(...hourAmt));
   const bestHourCnt=hourCnt.indexOf(Math.max(...hourCnt));
   if($("rpr-best-hour")) $("rpr-best-hour").textContent=String(bestHour).padStart(2,"0")+":00";
@@ -3182,25 +3209,25 @@ function renderRaporlar(){
 
   // ── En iyi gün (tarih bazlı) ──────────────────────────────
   const dayMap={};
-  active.forEach(t=>{const d=getTxDate(t);if(d){const k=d.toLocaleDateString("tr-TR");if(!dayMap[k])dayMap[k]={amt:0,cnt:0,gun:GUNLER[d.getDay()]};dayMap[k].amt+=t.amount;dayMap[k].cnt++;}});
+  allItems.forEach(t=>{const d=getTxDate(t);if(d){const k=d.toLocaleDateString("tr-TR");if(!dayMap[k])dayMap[k]={amt:0,cnt:0,gun:GUNLER[d.getDay()]};dayMap[k].amt+=t.amount;dayMap[k].cnt++;}});
   const bestDay=Object.entries(dayMap).sort((a,b)=>b[1].amt-a[1].amt)[0];
   if(bestDay&&$("rpr-best-day")) $("rpr-best-day").textContent=bestDay[0]+" "+bestDay[1].gun;
   if(bestDay&&$("rpr-best-day-amt")) $("rpr-best-day-amt").textContent=fmt(bestDay[1].amt)+" · "+bestDay[1].cnt+" işlem";
 
   // ── En sadık üye ──────────────────────────────────────────
   const memberMap={};
-  active.forEach(t=>{if(!memberMap[t.cust_id])memberMap[t.cust_id]={name:t.cust_name,total:0,cnt:0};memberMap[t.cust_id].total+=t.amount;memberMap[t.cust_id].cnt++;});
+  allItems.forEach(t=>{if(!t.cust_id)return;if(!memberMap[t.cust_id])memberMap[t.cust_id]={name:t.cust_name,total:0,cnt:0};memberMap[t.cust_id].total+=t.amount;memberMap[t.cust_id].cnt++;});
   const topMember=Object.values(memberMap).sort((a,b)=>b.total-a.total)[0];
   if(topMember&&$("rpr-top-member")) $("rpr-top-member").textContent=topMember.name;
   if(topMember&&$("rpr-top-member-amt")) $("rpr-top-member-amt").textContent=fmt(topMember.total)+" · "+topMember.cnt+" işlem";
 
   // ── Yöntem bazlı dağılım ──────────────────────────────────
-  const methodMap={"Havale":0,"Shopier":0,"Kripto":0};
-  active.forEach(t=>{if(methodMap[t.type]!==undefined)methodMap[t.type]+=t.amount;});
+  const methodMap={"Havale":0,"Shopier":0,"Kripto":0,"Shopier Tahsilat":0};
+  allItems.forEach(t=>{if(methodMap[t.type]!==undefined)methodMap[t.type]+=t.amount;});
   const totalAmt=Object.values(methodMap).reduce((s,v)=>s+v,0)||1;
-  const mColors={"Havale":"#3b82f6","Shopier":"#10b981","Kripto":"#f59e0b"};
-  const mIcons={"Havale":"ti-building-bank","Shopier":"ti-brand-shopee","Kripto":"ti-currency-bitcoin"};
-  if($("rpr-method-dist")) $("rpr-method-dist").innerHTML=Object.entries(methodMap).map(([m,v])=>{
+  const mColors={"Havale":"#3b82f6","Shopier":"#10b981","Kripto":"#f59e0b","Shopier Tahsilat":"#8b5cf6"};
+  const mIcons={"Havale":"ti-building-bank","Shopier":"ti-brand-shopee","Kripto":"ti-currency-bitcoin","Shopier Tahsilat":"ti-chart-bar"};
+  if($("rpr-method-dist")) $("rpr-method-dist").innerHTML=Object.entries(methodMap).filter(([,v])=>v>0).map(([m,v])=>{
     const pct=Math.round((v/totalAmt)*100);
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px">
@@ -3219,7 +3246,7 @@ function renderRaporlar(){
   for(let i=5;i>=0;i--){
     const d=new Date(now2.getFullYear(),now2.getMonth()-i,1);
     monthLabels.push(d.toLocaleDateString("tr-TR",{month:"short",year:"2-digit"}));
-    monthData.push(active.filter(t=>{const td=getTxDate(t);return td&&td.getFullYear()===d.getFullYear()&&td.getMonth()===d.getMonth();}).reduce((s,t)=>s+t.amount,0));
+    monthData.push(allItems.filter(t=>{const td=getTxDate(t);return td&&td.getFullYear()===d.getFullYear()&&td.getMonth()===d.getMonth();}).reduce((s,t)=>s+t.amount,0));
   }
   const mxAmt=Math.max(...monthData)||1;
   const mCtx=$("rpr-monthly-canvas");
