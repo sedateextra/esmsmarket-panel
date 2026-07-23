@@ -1029,20 +1029,6 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
-    <div class="card">
-      <div class="card-title"><div class="card-title-left"><i class="ti ti-list-details"></i>İşlem logu</div><span id="log-count" class="tbadge"></span></div>
-      <div class="srow" style="margin-bottom:10px">
-        <input type="text" id="log-search" placeholder="Kullanıcı veya detay ara..." oninput="renderLog()">
-      </div>
-      <table><colgroup><col style="width:15%"><col style="width:11%"><col style="width:11%"><col style="width:32%"><col style="width:18%"><col style="width:13%"></colgroup>
-        <thead><tr><th>Tarih / Saat</th><th>Kullanıcı</th><th>İşlem</th><th>Detay</th><th>Hedef</th><th></th></tr></thead>
-        <tbody id="log-body"></tbody>
-      </table>
-      <div id="no-log" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz log yok.</div>
-    </div>
-  </div>
-</div>
-
   <!-- LOG -->
   <div id="page-log" class="page">
     <div class="srow" style="margin-bottom:10px">
@@ -1115,6 +1101,8 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
 const SUPABASE_URL = "https://ngfvvsrnnyotbwrdvxjl.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnZ2c3JubnlvdGJ3cmR2eGpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNTMyNDIsImV4cCI6MjA5NzYyOTI0Mn0.2W49qbQk6M_jKu5W9lEsejW6l4J_jP68HvajMTEizt8";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const HERO_KEY = "6bAcA64fAc5373ddA7d49c488452A5c2";
+const HERO_BASE = "https://hero-sms.com/stubs/handler_api.php?api_key="+HERO_KEY;
 
 // ============================================================
 // TELEGRAM
@@ -1376,7 +1364,6 @@ function initDash(){
   renderBorcular();
   renderDashboard();
 
-  loadHeroCountries();
   updateLastTxDates();
 }
 
@@ -3296,6 +3283,24 @@ function renderRaporlar(){
 // ============================================================
 // LOG
 // ============================================================
+function renderLog(){
+  const tbody = document.getElementById("log-body"); if(!tbody) return;
+  const q = (document.getElementById("log-search")?.value||"").toLowerCase();
+  const filtered = logs.filter(l=>!l.deleted&&(!q||(l.detail||"").toLowerCase().includes(q)||(l.target||"").toLowerCase().includes(q)||(l.user_name||"").toLowerCase().includes(q)));
+  const badge = a => a==="add"?`<span class="rbadge r-add">eklendi</span>`:a==="edit"?`<span class="rbadge r-edit">düzenlendi</span>`:a==="delete"||a==="cancel"?`<span class="rbadge r-delete">silindi</span>`:a==="import"?`<span class="rbadge r-import">import</span>`:a==="login"?`<span class="rbadge r-login">giriş</span>`:a==="nakit"?`<span class="rbadge r-add">nakit</span>`:`<span class="rbadge">${a}</span>`;
+  const noLog = document.getElementById("no-log");
+  if(noLog) noLog.style.display = filtered.length?"none":"block";
+  const cnt = document.getElementById("log-count");
+  if(cnt) cnt.textContent = filtered.length+" kayıt";
+  tbody.innerHTML = filtered.slice(0,300).map(l=>`<tr>
+    <td style="font-size:11px;color:var(--text3)">${l.ts||"—"}</td>
+    <td style="font-size:11px;font-weight:600;color:var(--purple)">${l.user_name||"—"}</td>
+    <td>${badge(l.action)}</td>
+    <td style="font-size:11px;color:var(--text2)">${l.detail||"—"}</td>
+    <td style="font-size:11px;color:var(--text3)">${l.target||"—"}</td>
+    <td></td>
+  </tr>`).join("");
+}
 
 // ============================================================
 // BORÇLULAR
