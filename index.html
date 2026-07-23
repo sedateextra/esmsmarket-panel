@@ -1448,10 +1448,13 @@ async function doLogin(){
     localStorage.setItem("esms_login_time", Date.now().toString());
     document.getElementById("login-screen").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
-    document.getElementById("current-user-label").textContent = u;
+    const ul = document.getElementById("current-user-label");
+    if(ul) ul.textContent = u;
+    const unl = document.getElementById("user-name-label");
+    if(unl) unl.textContent = u;
     const av = document.getElementById("user-avatar");
-    av.textContent = USERS[u].initials;
-    av.style.background = USERS[u].avatarBg;
+    if(av){ av.textContent = USERS[u].initials; av.style.background = USERS[u].avatarBg; }
+    showLoading(true);
     await loadAll();
     startSessionTimer();
     initDash();
@@ -4126,16 +4129,17 @@ function applyTheme(){
 // ============================================================
 document.addEventListener("DOMContentLoaded", async ()=>{
   applyTheme();
+  showLoading(true);
   const savedUser = localStorage.getItem("esms_user");
   const loginTime = parseInt(localStorage.getItem("esms_login_time")||"0");
   if(savedUser && USERS[savedUser] && (Date.now()-loginTime < 30*60*1000)){
     currentUser = savedUser;
     document.getElementById("login-screen").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
-    document.getElementById("current-user-label").textContent = savedUser;
+    const ul = document.getElementById("current-user-label");
+    if(ul) ul.textContent = savedUser;
     const av = document.getElementById("user-avatar");
-    av.textContent = USERS[savedUser].initials;
-    av.style.background = USERS[savedUser].avatarBg;
+    if(av){ av.textContent = USERS[savedUser].initials; av.style.background = USERS[savedUser].avatarBg; }
     await loadAll();
     startSessionTimer();
     initDash();
@@ -4143,6 +4147,8 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   } else {
     localStorage.removeItem("esms_user");
     localStorage.removeItem("esms_login_time");
+    document.getElementById("login-screen").classList.remove("hidden");
+    document.getElementById("dashboard").classList.add("hidden");
     showLoading(false);
   }
 });
