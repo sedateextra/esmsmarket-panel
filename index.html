@@ -3277,21 +3277,6 @@ async function sendDailyReport(){
 
   // Hero SMS günlük özeti
   let heroSmsSection = "";
-  try {
-    const hRes = await fetch(`${HERO_BASE}?action=getHistory`);
-    const hData = await hRes.json();
-    const hHistory = Array.isArray(hData)?hData:(hData.history||[]);
-    const todayStr4 = today.toDateString();
-    const todayH2 = hHistory.filter(h=>h.date&&new Date(h.date).toDateString()===todayStr4);
-    const todaySuccess2 = todayH2.filter(h=>String(h.status)==="6").length;
-    const todayCancel2 = todayH2.filter(h=>String(h.status)==="8"||String(h.status)==="9").length;
-    const todaySpentH2 = todayH2.reduce((s,h)=>s+(parseFloat(h.cost)||0),0);
-    const heroBalRes = await fetch(`${HERO_BASE}?action=getBalance`);
-    const heroBalText = await heroBalRes.text();
-    const heroBal = heroBalText.startsWith("ACCESS_BALANCE:") ? parseFloat(heroBalText.split(":")[1]) : null;
-    const heroBalLine = heroBal!=null ? "\n💰 Bakiye: $"+heroBal.toFixed(2) : "";
-    heroSmsSection = "\n━━━━━━━━━━━━━━━━━━\n📱 <b>Hero SMS özeti:</b>\n✅ Başarılı: "+todaySuccess2+"\n❌ İptal/İade: "+todayCancel2+"\n💸 Harcanan: $"+todaySpentH2.toFixed(2)+heroBalLine;
-  } catch(e){}
 
   const msg = `📊 <b>ESMSMarket Günlük Rapor</b>
 📅 ${today.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})} | ${today.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})}
@@ -3969,29 +3954,10 @@ async function renderDashboard(){
       </div>
     </div>`).join("") : '<div style="font-size:12px;color:var(--text3);padding:.5rem 0;text-align:center">İşlem yok.</div>';
 
-  // Hero SMS günlük stats
-  try {
-    const hRes = await fetch(`${HERO_BASE}?action=getHistory`);
-    const hData = await hRes.json();
-    const hHistory = (Array.isArray(hData) ? hData : (hData.history||[])).map(h=>({
-      status: String(h.status??""),
-      price: h.cost??h.price??0,
-      createdAt: h.date||h.createdAt||null,
-      smsCode: h.sms||h.smsCode||null,
-    }));
-    const todayStr3 = today.toDateString();
-    const todayH = hHistory.filter(h=>h.createdAt&&new Date(h.createdAt).toDateString()===todayStr3);
-    const todaySuccess = todayH.filter(h=>h.status==="6"||h.status==="3"||h.smsCode).length;
-    const todayCancel = todayH.filter(h=>h.status==="8"||h.status==="9").length;
-    const todaySpentH = todayH.reduce((s,h)=>s+(parseFloat(h.price)||0),0);
-    document.getElementById("db-hero-success").textContent = todaySuccess;
-    document.getElementById("db-hero-cancel").textContent = todayCancel;
-    document.getElementById("db-hero-spent").textContent = "$"+todaySpentH.toFixed(2);
-  } catch(e){ 
-    document.getElementById("db-hero-success").textContent = "—";
-    document.getElementById("db-hero-cancel").textContent = "—";
-    document.getElementById("db-hero-spent").textContent = "—";
-  }
+  // Hero SMS stats (CORS nedeniyle devre dışı)
+  if(document.getElementById("db-hero-success")) document.getElementById("db-hero-success").textContent = "—";
+  if(document.getElementById("db-hero-cancel"))  document.getElementById("db-hero-cancel").textContent  = "—";
+  if(document.getElementById("db-hero-spent"))   document.getElementById("db-hero-spent").textContent   = "—";
 
   // Son 30 gün çizgi grafiği
   const days30=[];
