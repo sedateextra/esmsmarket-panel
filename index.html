@@ -1340,19 +1340,26 @@ let customers = [];
 let transactions = [];
 let expenses = [];
 let logs = [];
+let borclar = [];
+let nakitHareketler = [];
+let shopierCollections = [];
 let bonusRules = {};
+let trendChart = null;
+let kasaCurrentTab = "all";
+let donemKapatTip = null;
+let borcEditId = null;
+let borcPaymentTargetId = null;
+let sessionSecondsLeft = 30*60;
+let sessionInterval = null;
+let dbLineChart = null, dbPieChart = null, dbHourChart = null;
+let rprWeekChart = null, rprHourChart = null, rprMonthChart = null;
+let xlPending = null;
+let currentExpenseType = "";
+let noteTargetId = null;
 let custPage = 0;
 let dateFilter = "all";
-let noteTargetId = null;
-let custEditId = null;
-let currentExpenseType = "";
 let chartMode = "monthly";
-let trendChart = null;
-let xlPending = null;
-let sessionSecondsLeft = 30 * 60;
-let sessionInterval = null;
-const PAGE_SIZE = 15;
-
+let custEditId = null;
 const typeIcons = {"Havale":"ti-building-bank","Shopier":"ti-brand-shopee","Kripto":"ti-currency-bitcoin"};
 
 function fmt(n){return"₺"+parseFloat(n||0).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -2069,9 +2076,9 @@ function renderTop10(){
 // ============================================================
 // KASA
 // ============================================================
-let kasaCurrentTab = "all";
+// (global yukarida tanimlandi: let kasaCurrentTab = "all";)
 
-let shopierCollections = [];
+// (global yukarida tanimlandi: let shopierCollections = [];)
 
 async function loadShopierCollections(){
   const {data} = await db.from("shopier_collections").select("*").order("payment_date",{ascending:false});
@@ -2765,7 +2772,7 @@ async function addNakitGirisOnayla(){
 // Geriye uyumluluk
 function openNakitKasa(){ openNakitDuzenle(); }
 async function addNakitGiris(){ await addNakitGirisOnayla(); }
-let nakitHareketler = [];
+// nakitHareketler yukarida tanimlandi
 
 async function loadNakitKasa(){
   // balance_history veya ayrı bir "nakit_kasa" mantığı — expenses tablosunda type="Nakit Kasa" olarak tutuyoruz
@@ -2881,7 +2888,7 @@ function clearKasaFilters(){
 // ============================================================
 // DÖNEM KAPATMA
 // ============================================================
-let donemKapatTip = null;
+// (global yukarida tanimlandi: let donemKapatTip = null;)
 
 function calcDonemKalan(){
   const herosms=parseFloat(document.getElementById("dist-herosms")?.value)||0;
@@ -3439,7 +3446,7 @@ function updateXLStats(){
 // ============================================================
 // RAPORLAR
 // ============================================================
-let rprWeekChart=null, rprHourChart=null, rprMonthChart=null;
+// (global yukarida tanimlandi: let rprWeekChart=null, rprHourChart=null, rprMonth)
 
 function renderRaporlar(){
   const active=transactions.filter(t=>!t.cancelled);
@@ -3622,9 +3629,9 @@ function renderLog(){
 // ============================================================
 // BORÇLULAR
 // ============================================================
-let borclar = [];
-let borcEditId = null;
-let borcPaymentTargetId = null;
+// borclar yukarida tanimlandi
+// (global yukarida tanimlandi: let borcEditId = null;)
+// (global yukarida tanimlandi: let borcPaymentTargetId = null;)
 
 function renderBorcular(){
   const q = (document.getElementById("borc-search")?.value||"").toLowerCase();
@@ -3836,7 +3843,7 @@ function exportBorcExcel(){
 // ============================================================
 // DASHBOARD
 // ============================================================
-let dbLineChart=null, dbPieChart=null, dbHourChart=null;
+// (global yukarida tanimlandi: let dbLineChart=null, dbPieChart=null, dbHourChart)
 
 async function renderDashboard(){
   const today = new Date();
