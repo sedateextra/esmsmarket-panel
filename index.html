@@ -1374,6 +1374,7 @@ function showLoading(v){document.getElementById("loading-overlay").style.display
 async function loadAll(){
   showLoading(true);
   try {
+    console.log("[loadAll] Supabase'den veri çekiliyor...");
     const [cRes, tRes, eRes, lRes, bRes, borRes, scRes] = await Promise.all([
       db.from("customers").select("*").order("id", {ascending:false}),
       db.from("transactions").select("*").order("created_at", {ascending:false}),
@@ -1383,13 +1384,20 @@ async function loadAll(){
       db.from("borclar").select("*").order("created_at", {ascending:false}),
       db.from("shopier_collections").select("*").order("payment_date", {ascending:false})
     ]);
+    if(cRes.error)   console.error("customers hatası:",   cRes.error);
+    if(tRes.error)   console.error("transactions hatası:", tRes.error);
+    if(eRes.error)   console.error("expenses hatası:",     eRes.error);
+    if(lRes.error)   console.error("logs hatası:",         lRes.error);
+    if(bRes.error)   console.error("bonus_rules hatası:",  bRes.error);
+    if(borRes.error) console.error("borclar hatası:",      borRes.error);
+    if(scRes.error)  console.error("shopier hatası:",      scRes.error);
     customers = (cRes.data||[]).map(c=>({...c, notes: c.notes||[]}));
     transactions = tRes.data||[];
     expenses = eRes.data||[];
     logs = lRes.data||[];
     borclar = (borRes.data||[]).map(b=>({...b, payments: b.payments||[]}));
     shopierCollections = scRes.data||[];
-    // Nakit kasa hareketlerini yükle
+    console.log("[loadAll] Yüklenen:", {customers:customers.length, transactions:transactions.length, expenses:expenses.length, logs:logs.length, borclar:borclar.length, shopier:shopierCollections.length});
     const {data:nakitData}=await db.from("logs").select("*").eq("action","nakit").order("created_at",{ascending:false}).limit(50);
     nakitHareketler = nakitData||[];
     bonusRules = {};
@@ -1399,7 +1407,7 @@ async function loadAll(){
       "Shopier":{type:"Shopier",min_amount:500,rate:20,multiple_of:true,enabled:true},
       "Kripto":{type:"Kripto",min_amount:500,rate:25,multiple_of:false,enabled:true}
     };
-  } catch(e){ console.error(e); }
+  } catch(e){ console.error("[loadAll] KRİTİK HATA:", e); }
   showLoading(false);
 }
 
@@ -1482,20 +1490,20 @@ async function doLogout(auto=false){
 }
 
 function initDash(){
-  renderCustomers();
-  renderSidebar();
-  updateKasaMetrics();
-  populateCustSelect();
-  updateXLStats();
-  renderBonusRulesEditor();
-  renderActiveRulesDisplay();
-  renderTop10();
-  renderNewTxTable();
-  renderLog();
-  renderBorcular();
-  renderDashboard();
-
-  updateLastTxDates();
+  const safe = (name, fn) => { try { fn(); } catch(e){ console.error("["+name+"] hata:", e); } };
+  safe("renderCustomers", renderCustomers);
+  safe("renderSidebar", renderSidebar);
+  safe("updateKasaMetrics", updateKasaMetrics);
+  safe("populateCustSelect", populateCustSelect);
+  safe("updateXLStats", updateXLStats);
+  safe("renderBonusRulesEditor", renderBonusRulesEditor);
+  safe("renderActiveRulesDisplay", renderActiveRulesDisplay);
+  safe("renderTop10", renderTop10);
+  safe("renderNewTxTable", renderNewTxTable);
+  safe("renderLog", renderLog);
+  safe("renderBorcular", renderBorcular);
+  safe("renderDashboard", renderDashboard);
+  safe("updateLastTxDates", updateLastTxDates);
 }
 
 function showPage(id,btn){
