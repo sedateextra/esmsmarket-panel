@@ -648,6 +648,9 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="val" id="k-kripto" style="color:var(--warning)">₺0</div>
         <div class="sub" id="k-kripto-sub"></div>
         <div style="display:flex;gap:5px;margin-top:8px">
+          <button onclick="openKriptoDuzenle()" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">
+            <i class="ti ti-edit"></i> Düzenle
+          </button>
           <button onclick="openAktarimModal('kripto')" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--warning);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:600">
             <i class="ti ti-arrows-transfer-down"></i> Aktar
           </button>
@@ -2542,22 +2545,7 @@ const kriptoToplam=kriptoGelir-kriptoAktarim;
   const tabKomisyon=filteredExp.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
 
   const metricsEl=document.getElementById("kasa-tab-metrics");
-  if(metricsEl){
-    if(tab==="gider"){
-      metricsEl.innerHTML=
-        "<div class='metric'><div class='lbl'><i class='ti ti-arrow-down-circle' style='color:var(--danger)'></i>Toplam gider</div><div class='val' style='color:var(--danger)'>"+fmt(tabExpense)+"</div><div class='sub'>"+filteredExp.length+" kayıt</div></div>"+
-        "<div class='metric'><div class='lbl'><i class='ti ti-brand-shopee' style='color:var(--warning)'></i>Shopier komisyon</div><div class='val' style='color:var(--warning)'>"+fmt(tabKomisyon)+"</div></div>"+
-        "<div class='metric'><div class='lbl'><i class='ti ti-briefcase'></i>İş gideri</div><div class='val'>"+fmt(expenses.filter(e=>e.type==="İş gideri").reduce((s,e)=>s+e.amount,0))+"</div></div>"+
-        "<div class='metric'><div class='lbl'><i class='ti ti-users'></i>Personel</div><div class='val'>"+fmt(expenses.filter(e=>e.type==="Personel gideri").reduce((s,e)=>s+e.amount,0))+"</div></div>";
-    } else {
-      const uyeCount=new Set(filteredTx.map(t=>t.cust_id)).size;
-      metricsEl.innerHTML=
-        "<div class='metric'><div class='lbl'><i class='ti ti-arrow-up-circle' style='color:var(--success)'></i>Gelir</div><div class='val' style='color:var(--success)'>"+fmt(tabIncome)+"</div><div class='sub'>"+filteredTx.length+" işlem</div></div>"+
-        "<div class='metric'><div class='lbl'><i class='ti ti-gift' style='color:var(--warning)'></i>Bonus</div><div class='val' style='color:var(--warning)'>"+fmt(tabBonus)+"</div><div class='sub'>"+filteredTx.filter(t=>t.bonus>0).length+" işlemde</div></div>"+
-        (tab==="shopier"?"<div class='metric'><div class='lbl'><i class='ti ti-coin' style='color:var(--danger)'></i>Komisyon</div><div class='val' style='color:var(--danger)'>"+fmt(tabKomisyon)+"</div></div>":"<div class='metric'><div class='lbl'><i class='ti ti-users'></i>Üye sayısı</div><div class='val'>"+uyeCount+"</div></div>")+
-        "<div class='metric metric-accent'><div class='lbl'><i class='ti ti-scale'></i>Net</div><div class='val' style='color:"+(tabNet>=0?"var(--success)":"var(--danger)")+"'>"+fmt(tabNet)+"</div></div>";
-    }
-  }
+  if(metricsEl) metricsEl.innerHTML="";
 
   if(document.getElementById("kasa-table-title")) document.getElementById("kasa-table-title").textContent=tabTitle;
 
@@ -2901,6 +2889,40 @@ async function aktarimKesinOnayla(){
 }
 
 // Nakit düzenleme
+// Kripto bakiye düzeltme
+async function openKriptoDuzenle(){
+  const mevcut = window._kasaKripto||0;
+  const yeni = prompt("Kripto bakiye düzeltme\n\nMevcut: "+fmt(mevcut)+"\n\nYeni bakiye girin (₺):", mevcut.toFixed(2));
+  if(yeni===null) return;
+  const yeniTutar = parseFloat(yeni);
+  if(isNaN(yeniTutar)){ showToast("⚠️ Geçerli bir tutar girin."); return; }
+  const fark = yeniTutar - mevcut;
+  if(Math.abs(fark)<0.01){ showToast("ℹ️ Fark yok."); return; }
+  if(!confirm("Kripto bakiye "+fmt(mevcut)+" → "+fmt(yeniTutar)+"\nFark: "+(fark>0?"+":"")+fmt(fark)+"\n\nOnaylıyor musunuz?")) return;
+  showLoading(true);
+  const ts = new Date().toLocaleString("tr-TR");
+  const dateStr = new Date().toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+  if(fark>0){
+    // Artırma: transactions'a Kripto olarak ekle (isimsiz düzeltme)
+    await db.from("transactions").insert({
+      cust_id:0, cust_name:"Kripto Düzeltme", amount:fark, bonus:0, type:"Kripto",
+      note:"Bakiye düzeltme", user_name:currentUser, date:dateStr
+    });
+  } else {
+    // Azaltma: expenses'a "Kripto Aktarım" gider olarak ekle
+    await db.from("expenses").insert({
+      type:"Kripto Aktarım", amount:Math.abs(fark),
+      note:"Bakiye düzeltme (azaltma)",
+      user_name:currentUser, date:dateStr
+    });
+  }
+  await addLog("edit","Kripto bakiye düzeltme: "+fmt(fark),"Fiziksel sayım");
+  await sendTelegram("₿ <b>Kripto Bakiye Düzeltme</b>\n📊 Eski: "+fmt(mevcut)+"\n📊 Yeni: <b>"+fmt(yeniTutar)+"</b>\n🔄 Fark: <b>"+(fark>0?"+":"")+fmt(fark)+"</b>\n⏰ "+ts+"\n👤 "+currentUser);
+  await loadAll();
+  updateKasaMetrics();
+  showLoading(false);
+  showToast("✅ Kripto bakiyesi güncellendi!");
+}
 function openNakitDuzenle(){
   const nakitTop=(nakitHareketler||[]).reduce((s,n)=>s+(n.amount||0),0);
   const havaleTop=transactions.filter(t=>!t.cancelled&&(t.type==="Havale"||t.type==="Havale/EFT")).reduce((s,t)=>s+t.amount,0);
