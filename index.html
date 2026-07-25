@@ -2687,6 +2687,14 @@ function updateAktarimOnay(){
 function aktarimOnayla(){
   const tutar = parseFloat(document.getElementById("aktarim-tutar").value)||0;
   if(!tutar||!_aktarimHedef) return;
+  // Bakiye kontrolü
+  const mevcut = _aktarimKaynak==="shopier" ? (window._kasaShopierNet||0)
+               : _aktarimKaynak==="nakit"   ? (window._kasaNakit||0)
+               :                              (window._kasaKripto||0);
+  if(tutar > mevcut){
+    showToast("❌ Yetersiz bakiye! Maksimum: "+fmt(mevcut));
+    return;
+  }
   const kaynakLabel = _aktarimKaynak==="shopier"?"🤖 Shopier Net":_aktarimKaynak==="nakit"?"💵 Nakit Kasa":"₿ Kripto";
   const not = document.getElementById("aktarim-not").value||"";
   document.getElementById("aktarim-son-ozet").innerHTML =
@@ -3051,9 +3059,16 @@ function renderChart(){
   const ctx=document.getElementById("trend-chart");if(!ctx)return;
   const active=transactions.filter(t=>!t.cancelled);
   const scItems=(shopierCollections||[]).map(r=>{
-    const raw=r.payment_date||r.order_date||"";
+    const raw=(r.payment_date||r.order_date||"").trim();
     let ca=null;
-    if(raw){const p=raw.trim().split(/[\/\-]/);if(p.length===3)ca=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);}
+    if(raw){
+      const parts=raw.split(/\s+/);
+      const p=parts[0].split(/[\/\-]/);
+      const [hh,mm]=(parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
+      if(p.length===3){
+        ca=p[0].length===4?new Date(p[0],p[1]-1,p[2],hh,mm):new Date(p[2],p[1]-1,p[0],hh,mm);
+      }
+    }
     const isoStr = (ca && !isNaN(ca.getTime())) ? ca.toISOString() : null;
     return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:isoStr};
   });
@@ -3102,10 +3117,10 @@ function renderChart(){
     for(let i=23;i>=0;i--){
       const h=new Date(now2);h.setHours(now2.getHours()-i,0,0,0);
       labels.push(String(h.getHours()).padStart(2,"0")+":00");
-      havaleData.push(getTypeAmt(active,"Havale",h,"daily"));
-      shopierData.push(getTypeAmt(active,"Shopier",h,"daily"));
-      kriptoData.push(getTypeAmt(active,"Kripto",h,"daily"));
-      tahsilatData.push(0);
+      havaleData.push(getTypeAmt(allItems,"Havale",h,"daily"));
+      shopierData.push(getTypeAmt(allItems,"Shopier",h,"daily"));
+      kriptoData.push(getTypeAmt(allItems,"Kripto",h,"daily"));
+      tahsilatData.push(getTypeAmt(allItems,"Shopier Tahsilat",h,"daily"));
     }
   }
 
