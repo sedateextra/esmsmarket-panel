@@ -2458,7 +2458,7 @@ function updateKasaMetrics(){
   const scList = shopierCollections||[];
   const shopierTahsilatToplam = scList.reduce((s,r)=>s+(r.collection||0),0);
   // Her tahsilata bonus kuralına göre otomatik bonus hesapla (Shopier tipi kuralı)
-  const shopierTahsilatBonus = scList.reduce((s,r)=>s+calcBonusAmt(r.collection||0,"Shopier"),0);
+  const shopierTahsilatBonus = scList.reduce((s,r)=>s+calcBonusAmt(r.sales_price||r.collection||0,"Shopier"),0);
   const totalIncome=active.reduce((s,t)=>s+t.amount,0) + shopierTahsilatToplam;
   const totalBonus=active.reduce((s,t)=>s+t.bonus,0) + shopierTahsilatBonus;
   const totalExpense=expenses.reduce((s,e)=>s+e.amount,0);
@@ -2653,7 +2653,7 @@ const kriptoToplam=kriptoGelir-kriptoAktarim;
       }
       const musteri = r.cust_name || r.customer_name || "—";
       // Shopier bonus (hediye kurallarına göre otomatik)
-      const scBonus = calcBonusAmt(r.collection||0, "Shopier");
+      const scBonus = calcBonusAmt(r.sales_price||r.collection||0, "Shopier");
       const bonusCell = scBonus>0 ? "<span style='color:var(--warning)'>"+fmt(scBonus)+"</span>" : "—";
       // Sıralama için timestamp
       let sortTs = 0;
@@ -3888,7 +3888,14 @@ function renderRaporlar(){
       date:raw.substring(0,10),
       cust_name:r.cust_name||r.customer_name||"Shopier",
       cust_id:r.cust_id||("shopier-"+(r.customer_email||r.customer_name||"")),
-      bonus:calcBonusAmt(r.collection||0,"Shopier")
+      bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier") ca.toISOString() : null;
+    return {
+      amount:r.collection||0,
+      type:"Shopier Tahsilat",
+      created_at:isoStr,
+      date:raw.substring(0,10),
+      cust_name:r.cust_name||r.customer_name||"Shopier",
+      bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier")
     };
   });
   const allItems=[...active,...scItems];
