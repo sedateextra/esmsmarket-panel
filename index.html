@@ -919,11 +919,28 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         </select>
         <input type="date" id="kasa-filter-from" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
         <input type="date" id="kasa-filter-to" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+        <select id="kasa-filter-user" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+          <option value="">Tüm kullanıcılar</option>
+          <option value="jordan">👤 Jordan</option>
+          <option value="brad">👤 Brad</option>
+          <option value="shopier-bot">🤖 Shopier bot</option>
+          <option value="shopier-col">📊 Shopier tahsilat</option>
+        </select>
+        <select id="kasa-sort" onchange="updateKasaMetrics()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+          <option value="date-desc">📅 Yakın tarihe göre</option>
+          <option value="date-asc">📅 Uzak tarihe göre</option>
+          <option value="amt-desc">💰 Tutar büyükten küçüğe</option>
+          <option value="amt-asc">💰 Tutar küçükten büyüğe</option>
+        </select>
         <button onclick="clearKasaFilters()" style="font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer"><i class="ti ti-x"></i></button>
       </div>
       <div id="kasa-table-wrap">
         <table><colgroup><col style="width:16%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:25%"></colgroup>
-          <thead><tr><th>Üye / Açıklama</th><th>Tür</th><th>Tutar</th><th>Bonus</th><th>Kaynak</th><th>Tarih</th><th>Not</th><th style="width:50px"></th></tr></thead>
+          rows=txRows.map(t=>{
+      const ts=t.created_at?new Date(t.created_at).getTime():0;
+      const userBadge=t.user_name==="shopier-bot"?"🤖 Bot":"👤 "+(t.user_name||"—");
+      return "<tr data-ts='"+ts+"' data-amt='"+t.amount+"'><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge' style='background:"+( typeColors[t.type]||"rgba(139,92,246,.15)")+"'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+formatTarihGun(t.date,t.created_at)+"</td><td style='font-size:11px;color:var(--purple);font-weight:600'>"+userBadge+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td><td><button onclick='deleteTx(\""+t.id+"\",\""+t.cust_id+"\","+t.amount+","+t.bonus+")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>";
+    });
           <tbody id="kasa-body"></tbody>
         </table>
       </div>
@@ -2597,7 +2614,10 @@ function updateKasaMetrics(){
     if(q) expRows=expRows.filter(e=>(e.note||"").toLowerCase().includes(q)||(e.type||"").toLowerCase().includes(q));
     if(filterType&&filterType!=="gider"&&filterType!=="tahsilat") expRows=[];
     if(filterFrom||filterTo) expRows=expRows.filter(e=>inDateRange(e.created_at||e.date));
-    rows=rows.concat(expRows.map(e=>"<tr><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+formatTarihGun(e.date,e.created_at)+"</td><td style='color:var(--text3);font-size:11px'>"+e.user_name+"</td><td><button onclick='deleteExpense(\""+e.id+"\")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>"));
+    rows=rows.concat(expRows.map(e=>{
+      const ts=e.created_at?new Date(e.created_at).getTime():0;
+      return "<tr data-ts='"+ts+"' data-amt='"+e.amount+"'><td style='color:var(--text2)'>"+(e.note||e.type)+"</td><td><span class='rbadge r-delete'>"+e.type+"</span></td><td style='color:var(--danger);font-weight:700'>-"+fmt(e.amount)+"</td><td>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)'>📉 Gider</span></td><td style='color:var(--text3);font-size:11px'>"+formatTarihGun(e.date,e.created_at)+"</td><td style='font-size:11px;color:var(--purple);font-weight:600'>👤 "+(e.user_name||"—")+"</td><td style='color:var(--text3);font-size:11px'>—</td><td><button onclick='deleteExpense(\""+e.id+"\")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>";
+    }));
   }
   // shopier_collections verilerini SADECE all sekmesine ekle
   if(tab==="all" && (!filterType||filterType==="tahsilat") && shopierCollections && shopierCollections.length){
@@ -2623,7 +2643,19 @@ function updateKasaMetrics(){
       // Shopier bonus (hediye kurallarına göre otomatik)
       const scBonus = calcBonusAmt(r.collection||0, "Shopier");
       const bonusCell = scBonus>0 ? "<span style='color:var(--warning)'>"+fmt(scBonus)+"</span>" : "—";
-      return "<tr style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td>"+bonusCell+"</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarihStr+gunStr+timeStr+"</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
+      // Sıralama için timestamp
+      let sortTs = 0;
+      if(rawTarih){
+        const parts=rawTarih.split(/\s+/);
+        const p=parts[0].split(/[\/\-]/);
+        const [hh,mm]=(parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
+        if(p.length===3){
+          const y2 = p[2].length===2 ? 2000+parseInt(p[2]) : parseInt(p[2]);
+          const d = p[0].length===4 ? new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]),hh,mm) : new Date(y2,parseInt(p[1])-1,parseInt(p[0]),hh,mm);
+          if(!isNaN(d.getTime())) sortTs = d.getTime();
+        }
+      }
+      return "<tr data-ts='"+sortTs+"' data-amt='"+(r.collection||0)+"' style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td>"+bonusCell+"</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarihStr+gunStr+timeStr+"</td><td style='font-size:11px;color:var(--success);font-weight:600'>🤖 Shopier</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
     });
     rows=rows.concat(colRows);
   } else if(tab==="all" && (!shopierCollections||!shopierCollections.length)){
@@ -2635,7 +2667,35 @@ function updateKasaMetrics(){
   const kasa_total=rows.length;
   if(document.getElementById("kasa-table-count")) document.getElementById("kasa-table-count").textContent=kasa_total+" kayıt";
   document.getElementById("no-kasa").style.display=kasa_total?"none":"block";
-  document.getElementById("kasa-body").innerHTML=rows.join("");
+  // Kullanıcı filtresi
+  const filterUser = document.getElementById("kasa-filter-user")?.value||"";
+  const sortMode = document.getElementById("kasa-sort")?.value||"date-desc";
+  // DOM'a yazmadan önce parse et ve sırala
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = "<table><tbody>"+rows.join("")+"</tbody></table>";
+  let trList = Array.from(tempDiv.querySelectorAll("tr"));
+  // Kullanıcı filtresi (HTML içinde ara)
+  if(filterUser){
+    trList = trList.filter(tr=>{
+      const html = tr.innerHTML.toLowerCase();
+      if(filterUser==="shopier-bot") return html.includes("🤖 bot")||html.includes("🤖 shopier");
+      if(filterUser==="shopier-col") return html.includes("🤖 shopier")&&tr.textContent.includes("Tahsilat");
+      return html.includes(filterUser.toLowerCase());
+    });
+  }
+  // Sırala
+  trList.sort((a,b)=>{
+    const aTs=parseInt(a.getAttribute("data-ts"))||0;
+    const bTs=parseInt(b.getAttribute("data-ts"))||0;
+    const aAmt=parseFloat(a.getAttribute("data-amt"))||0;
+    const bAmt=parseFloat(b.getAttribute("data-amt"))||0;
+    if(sortMode==="date-desc") return bTs-aTs;
+    if(sortMode==="date-asc")  return aTs-bTs;
+    if(sortMode==="amt-desc")  return bAmt-aAmt;
+    if(sortMode==="amt-asc")   return aAmt-bAmt;
+    return 0;
+  });
+  document.getElementById("kasa-body").innerHTML = trList.map(tr=>tr.outerHTML).join("");
 }
 
 // ============================================================
@@ -3138,6 +3198,8 @@ async function shopierToNakit(){
 function clearKasaFilters(){
   ["kasa-search","kasa-filter-from","kasa-filter-to"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const sel=document.getElementById("kasa-filter-type");if(sel)sel.value="";
+  const usr=document.getElementById("kasa-filter-user");if(usr)usr.value="";
+  const srt=document.getElementById("kasa-sort");if(srt)srt.value="date-desc";
   updateKasaMetrics();
 }
 
