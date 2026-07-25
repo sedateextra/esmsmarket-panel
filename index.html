@@ -2603,7 +2603,11 @@ function updateKasaMetrics(){
     if(filterType&&filterType!=="gider"&&filterType!=="tahsilat") txRows=txRows.filter(t=>t.type===filterType||(filterType==="Shopier"&&t.user_name==="shopier-bot"));
     if(filterType==="gider"||filterType==="tahsilat") txRows=[];
     if(filterFrom||filterTo) txRows=txRows.filter(t=>inDateRange(t.created_at||t.date));
-    rows=txRows.map(t=>"<tr><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge' style='background:"+( typeColors[t.type]||"rgba(139,92,246,.15)")+"'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+formatTarihGun(t.date,t.created_at)+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td><td><button onclick='deleteTx(\""+t.id+"\",\""+t.cust_id+"\","+t.amount+","+t.bonus+")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>");
+    rows=txRows.map(t=>{
+      const ts=t.created_at?new Date(t.created_at).getTime():0;
+      const userBadge=t.user_name==="shopier-bot"?"🤖 Bot":"👤 "+(t.user_name||"—");
+      return "<tr data-ts='"+ts+"' data-amt='"+t.amount+"'><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge' style='background:"+( typeColors[t.type]||"rgba(139,92,246,.15)")+"'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+formatTarihGun(t.date,t.created_at)+"</td><td style='font-size:11px;color:var(--purple);font-weight:600'>"+userBadge+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td><td><button onclick='deleteTx(\""+t.id+"\",\""+t.cust_id+"\","+t.amount+","+t.bonus+")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>";
+    });
   }
   if(tab==="all"||tab==="gider"||tab==="shopier"){
     let expRows=filteredExp;
