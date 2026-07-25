@@ -2502,7 +2502,9 @@ function updateKasaMetrics(){
   window._kasaShopierBekleyen = _upcomingAmt;
 
   // Kripto toplam
-  const kriptoToplam=active.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
+  const kriptoGelir=active.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
+const kriptoAktarim=expenses.filter(e=>e.type==="Kripto Aktarım").reduce((s,e)=>s+e.amount,0);
+const kriptoToplam=kriptoGelir-kriptoAktarim;
   const kriptoEl=document.getElementById("k-kripto");
   if(kriptoEl) kriptoEl.textContent=fmt(kriptoToplam);
   const kriptoSub=document.getElementById("k-kripto-sub");
