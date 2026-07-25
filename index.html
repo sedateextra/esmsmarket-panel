@@ -739,8 +739,17 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
           </div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px">💡 Fiziksel sayım sonucuna göre bakiyeyi düzelt (fark log'a yazılır)</div>
         </div>
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Son hareketler</div>
-        <div id="nk-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px"></div>
+        <!-- Tarih filtresi -->
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <input type="date" id="nk-filter-from" onchange="renderNakitList()" style="font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+          <span style="font-size:11px;color:var(--text3)">–</span>
+          <input type="date" id="nk-filter-to" onchange="renderNakitList()" style="font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+          <button onclick="document.getElementById('nk-filter-from').value='';document.getElementById('nk-filter-to').value='';renderNakitList()" style="font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer">Temizle</button>
+        </div>
+        <!-- Ortak dağılımı -->
+        <div id="nk-ortak-summary" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px"></div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Hareketler</div>
+        <div id="nk-list" style="max-height:220px;overflow-y:auto;margin-bottom:14px"></div>
         <div style="border-top:1px solid var(--border);padding-top:12px">
           <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px">Nakit giriş ekle</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1274,6 +1283,40 @@ function scheduleNightReport(){
     await sendNightReport();
     setInterval(sendNightReport, 24*60*60*1000);
   }, msUntilMidnight);
+  // Çarşamba hatırlatıcı: Salı 20:00'de Shopier bekleyen tutar bildirimi
+  scheduleSaliHatirlatici();
+}
+
+function scheduleSaliHatirlatici(){
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(20,0,0,0);
+  // Bir sonraki Salı 20:00'ı bul
+  const daysUntilTue = (2 - now.getDay() + 7) % 7;
+  if(daysUntilTue===0 && now.getHours()>=20) next.setDate(next.getDate()+7);
+  else next.setDate(next.getDate()+daysUntilTue);
+  const msUntilTue = next - now;
+  setTimeout(async ()=>{
+    await sendCarsambaHatirlatici();
+    setInterval(sendCarsambaHatirlatici, 7*24*60*60*1000);
+  }, msUntilTue);
+}
+
+async function sendCarsambaHatirlatici(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+  // Yarın (Çarşamba) planlanan Shopier ödemeleri
+  const tomorrowStr = tomorrow.getFullYear()+"-"+String(tomorrow.getMonth()+1).padStart(2,"0")+"-"+String(tomorrow.getDate()).padStart(2,"0");
+  const bekleyen=(shopierCollections||[]).filter(r=>{
+    if(!r.planned_date)return false;
+    const p=r.planned_date.trim().split(/[\/\-]/);if(p.length!==3)return false;
+    const d=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);
+    return !isNaN(d.getTime()) && d.toDateString()===tomorrow.toDateString();
+  });
+  const tutar=bekleyen.reduce((s,r)=>s+(r.collection||0),0);
+  if(tutar>0){
+    await sendTelegram(`⏰ <b>Çarşamba Hatırlatıcı</b>\n━━━━━━━━━━━━━━\n📅 Yarın (${tomorrow.toLocaleDateString("tr-TR")}) Shopier ödemesi geliyor\n💰 Tutar: <b>${fmt(tutar)}</b>\n📊 ${bekleyen.length} sipariş\n\n💡 Yarın sabah panelden aktarımı yapmayı unutma!`);
+  }
 }
 
 async function sendNightReport(){
@@ -2780,11 +2823,79 @@ function openNakitDuzenle(){
   const mevcut=nakitTop+havaleTop;
   const el=document.getElementById("nk-mevcut-tutar");
   if(el) el.textContent=fmt(mevcut);
-  const list=document.getElementById("nk-list");
-  if(list) list.innerHTML=(nakitHareketler||[]).length
-    ? (nakitHareketler||[]).slice(0,10).map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><div style="flex:1"><div style="font-size:12px;font-weight:600">${n.target||n.detail||"—"}</div><div style="font-size:10px;color:var(--text3)">${n.ts||""} · ${n.user_name||""}</div></div><div style="font-size:13px;font-weight:700;color:var(--success)">${fmt(n.amount||0)}</div></div>`).join("")
-    : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Nakit hareketi yok.</div>';
+  renderNakitList();
   document.getElementById("nakit-duzenle-overlay").style.display="flex";
+}
+
+function renderNakitList(){
+  const list=document.getElementById("nk-list");
+  const summary=document.getElementById("nk-ortak-summary");
+  if(!list) return;
+  const from=document.getElementById("nk-filter-from")?.value;
+  const to=document.getElementById("nk-filter-to")?.value;
+  // Nakit hareketleri + Aktarımlar + Havale işlemleri (tümü)
+  const nakitHrk=(nakitHareketler||[]).map(n=>({...n, kaynak:"nakit"}));
+  const aktarimHrk=(logs||[]).filter(l=>l.action==="aktarim").map(l=>({...l, kaynak:"aktarim"}));
+  const havaleHrk=transactions.filter(t=>!t.cancelled&&(t.type==="Havale"||t.type==="Havale/EFT")).map(t=>({
+    ts: t.date||new Date(t.created_at).toLocaleString("tr-TR"),
+    user_name: t.user_name,
+    target: t.cust_name,
+    detail: "Havale girişi",
+    amount: t.amount,
+    created_at: t.created_at,
+    kaynak: "havale"
+  }));
+  let all=[...nakitHrk, ...aktarimHrk, ...havaleHrk];
+  // Tarih filtresi
+  if(from||to){
+    const fromD=from?new Date(from):null;
+    const toD=to?new Date(to+"T23:59:59"):null;
+    all=all.filter(h=>{
+      const d=h.created_at?new Date(h.created_at):null;
+      if(!d||isNaN(d)) return false;
+      if(fromD && d<fromD) return false;
+      if(toD && d>toD) return false;
+      return true;
+    });
+  }
+  all.sort((a,b)=>{
+    const da=a.created_at?new Date(a.created_at):new Date(0);
+    const dbb=b.created_at?new Date(b.created_at):new Date(0);
+    return dbb-da;
+  });
+  // Ortak dağılımı: aktarımların hedefine göre
+  const dagılım={jordan:0, brad:0, herosms:0, gider:0};
+  aktarimHrk.forEach(l=>{
+    if(from||to){
+      const d=new Date(l.created_at);
+      const fromD=from?new Date(from):null;
+      const toD=to?new Date(to+"T23:59:59"):null;
+      if(fromD && d<fromD) return;
+      if(toD && d>toD) return;
+    }
+    const t=(l.target||"").toLowerCase();
+    if(t.includes("jordan")) dagılım.jordan+=l.amount||0;
+    else if(t.includes("brad")) dagılım.brad+=l.amount||0;
+    else if(t.includes("hero")) dagılım.herosms+=l.amount||0;
+    else if(t.includes("gider")) dagılım.gider+=l.amount||0;
+  });
+  if(summary) summary.innerHTML=`
+    <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:6px 8px"><div style="font-size:10px;color:var(--text3)">👤 Jordan'a</div><div style="font-size:12px;font-weight:700;color:var(--purple)">${fmt(dagılım.jordan)}</div></div>
+    <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:6px 8px"><div style="font-size:10px;color:var(--text3)">👤 Brad'e</div><div style="font-size:12px;font-weight:700;color:var(--purple)">${fmt(dagılım.brad)}</div></div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:6px 8px"><div style="font-size:10px;color:var(--text3)">💊 Hero SMS'e</div><div style="font-size:12px;font-weight:700;color:var(--warning)">${fmt(dagılım.herosms)}</div></div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 8px"><div style="font-size:10px;color:var(--text3)">📉 Gidere</div><div style="font-size:12px;font-weight:700;color:var(--danger)">${fmt(dagılım.gider)}</div></div>`;
+  // Liste
+  const emoji=k=>k==="aktarim"?"📤":k==="havale"?"🏦":"💵";
+  list.innerHTML=all.length
+    ? all.slice(0,50).map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px">${emoji(n.kaynak)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.target||n.detail||"—"}</div>
+          <div style="font-size:10px;color:var(--text3)">${n.ts||""} · ${n.user_name||""}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${n.kaynak==="aktarim"?"var(--danger)":"var(--success)"}">${n.kaynak==="aktarim"?"-":""}${fmt(n.amount||0)}</div>
+      </div>`).join("")
+    : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Kayıt yok.</div>';
 }
 
 async function addNakitGirisOnayla(){
