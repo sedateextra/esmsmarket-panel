@@ -2434,22 +2434,9 @@ function updateKasaMetrics(){
   // Shopier net gelir (tahsilatlar dahil, komisyon düşülmüş)
   const shopierBrut=active.filter(t=>t.type==="Shopier"||t.user_name==="shopier-bot").reduce((s,t)=>s+t.amount,0);
   const shopierTahsilat=(shopierCollections||[]).reduce((s,r)=>s+(r.collection||0),0);
-  const _today = new Date(); _today.setHours(0,0,0,0);
-  const _upcoming = (shopierCollections||[]).filter(r=>{
-    if(!r.planned_date) return false;
-    const p = r.planned_date.trim().split(/[\/\-]/);
-    if(p.length!==3) return false;
-    const d = p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
-    return !isNaN(d.getTime()) && d>=_today;
-  });
-  const shopierBekleyenTutar = _upcoming.reduce((s,r)=>s+(r.collection||0),0);
-  const _nextDate = _upcoming.map(r=>{
-    const p = r.planned_date.trim().split(/[\/\-]/);
-    return p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
-  }).filter(d=>!isNaN(d.getTime())).sort((a,b)=>a-b)[0];
-  const _nextDateStr = _nextDate ? _nextDate.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+  const shopierNet=shopierBrut+shopierTahsilat-shopierKomTotal;
   const shopierNetEl=document.getElementById("k-shopier-net");
-  if(shopierNetEl) shopierNetEl.textContent=fmt(shopierBekleyenTutar);
+  if(shopierNetEl) shopierNetEl.textContent=fmt(shopierNet);
   const shopierNetSub=document.getElementById("k-shopier-net-sub");
   // Gelecek Shopier ödemesi (planned_date >= bugün)
   const _today = new Date(); _today.setHours(0,0,0,0);
