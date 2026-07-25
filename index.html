@@ -4005,30 +4005,24 @@ async function renderDashboard(){
   // Aktif işlemler
   const activeTx = transactions.filter(t=>!t.cancelled);
 
-  // Shopier tahsilat tarih+saat parse (2 haneli yıl desteği)
+  // Shopier tahsilatlarını allTx'e dahil et (tek kaynak: shopier_collections)
   const parseScDate = r => {
-    const raw = (r.payment_date||r.order_date||"").trim();
+    const raw = r.payment_date||r.order_date||"";
     if(!raw) return null;
-    const parts = raw.split(/\s+/);
-    const p = parts[0].split(/[\/\-]/);
+    // DD/MM/YYYY veya YYYY-MM-DD
+    const p = raw.trim().split(/[\/\-]/);
     if(p.length!==3) return null;
-    const [hh,mm] = (parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
-    const year2 = p[2].length===2 ? 2000+parseInt(p[2]) : parseInt(p[2]);
-    return p[0].length===4
-      ? new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]), hh, mm)
-      : new Date(year2, parseInt(p[1])-1, parseInt(p[0]), hh, mm);
+    return p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
   };
-  const scTx = (shopierCollections||[]).map(r=>{
-    const d = parseScDate(r);
-    return {
-      amount    : r.collection||0,
-      bonus     : calcBonusAmt(r.collection||0, "Shopier"),
-      type      : "Shopier Tahsilat",
-      cust_name : r.cust_name||r.customer_name||"Shopier",
-      user_name : "shopier-col",
-      date      : (r.payment_date||r.order_date||"").substring(0,10),
-      created_at: (d && !isNaN(d.getTime())) ? d.toISOString() : null,
-      note      : r.order_id||""
+  const scTx = (shopierCollections||[]).map(r=>({
+    amount    : r.collection||0,
+    bonus     : 0,
+    type      : "Shopier Tahsilat",
+    cust_name : r.cust_name||r.customer_name||"Shopier",
+    user_name : "shopier-col",
+    date      : (r.payment_date||r.order_date||"").substring(0,10),
+    created_at: r.payment_date||r.order_date||null,
+    note      : r.order_id||""
   }));
   const allTx = [...activeTx, ...scTx];
 
