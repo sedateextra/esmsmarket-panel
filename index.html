@@ -750,9 +750,16 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     <div id="nakit-duzenle-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
       <div class="modal" style="max-width:460px">
         <div class="modal-hdr"><h3>💵 Nakit Kasa Düzenle</h3><button onclick="document.getElementById('nakit-duzenle-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
-        <div style="padding:12px;background:var(--card2);border-radius:10px;margin-bottom:14px;display:flex;justify-content:space-between">
-          <span style="font-size:12px;color:var(--text2)">Mevcut nakit bakiye</span>
-          <span style="font-size:15px;font-weight:700;color:var(--success)" id="nk-mevcut-tutar">₺0</span>
+        <div style="padding:12px;background:var(--card2);border-radius:10px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:var(--text2)">Mevcut nakit bakiye</span>
+            <span style="font-size:15px;font-weight:700;color:var(--success)" id="nk-mevcut-tutar">₺0</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="nk-yeni-bakiye" placeholder="Yeni bakiye (₺)" style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+            <button onclick="nakitBakiyeDuzenle()" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:var(--purple);cursor:pointer;font-weight:600"><i class="ti ti-check"></i> Bakiyeyi Güncelle</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">💡 Fiziksel sayım sonucuna göre bakiyeyi düzelt (fark log'a yazılır)</div>
         </div>
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Son hareketler</div>
         <div id="nk-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px"></div>
@@ -2431,7 +2438,30 @@ function updateKasaMetrics(){
   const shopierNetEl=document.getElementById("k-shopier-net");
   if(shopierNetEl) shopierNetEl.textContent=fmt(shopierNet);
   const shopierNetSub=document.getElementById("k-shopier-net-sub");
-  if(shopierNetSub) shopierNetSub.textContent="Brüt: "+fmt(shopierBrut+shopierTahsilat)+" | Kom: -"+fmt(shopierKomTotal);
+  // Gelecek Shopier ödemesi (planned_date >= bugün)
+  const _today = new Date(); _today.setHours(0,0,0,0);
+  const _upcoming = (shopierCollections||[]).filter(r=>{
+    if(!r.planned_date) return false;
+    const p = r.planned_date.trim().split(/[\/\-]/);
+    if(p.length!==3) return false;
+    const d = p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
+    return !isNaN(d.getTime()) && d>=_today;
+  });
+  const _upcomingAmt = _upcoming.reduce((s,r)=>s+(r.collection||0),0);
+  const _nextDate = _upcoming.map(r=>{
+    const p = r.planned_date.trim().split(/[\/\-]/);
+    return p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
+  }).filter(d=>!isNaN(d.getTime())).sort((a,b)=>a-b)[0];
+  const _nextDateStr = _nextDate ? _nextDate.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+  if(shopierNetSub){
+    if(_upcomingAmt>0){
+      shopierNetSub.innerHTML = "📅 Gelecek: <b style='color:var(--warning)'>"+fmt(_upcomingAmt)+"</b> ("+_nextDateStr+")";
+    } else {
+      shopierNetSub.textContent = "Brüt: "+fmt(shopierBrut+shopierTahsilat)+" | Kom: -"+fmt(shopierKomTotal);
+    }
+  }
+  // Global'e aktar (aktarım butonu için)
+  window._kasaShopierBekleyen = _upcomingAmt;
 
   // Kripto toplam
   const kriptoToplam=active.filter(t=>t.type==="Kripto").reduce((s,t)=>s+t.amount,0);
@@ -2788,6 +2818,108 @@ async function addNakitGirisOnayla(){
     showLoading(false);
     updateKasaMetrics();
     showToast("✅ Nakit kasa güncellendi!");
+    document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
+  };
+}
+
+// Nakit bakiye düzeltme (fiziksel sayım)
+async function nakitBakiyeDuzenle(){
+  const yeni = parseFloat(document.getElementById("nk-yeni-bakiye")?.value);
+  if(isNaN(yeni)){ showToast("⚠️ Geçerli bir tutar girin."); return; }
+  const mevcut = window._kasaNakit||0;
+  const fark = yeni - mevcut;
+  if(Math.abs(fark)<0.01){ showToast("ℹ️ Fark yok, güncelleme yapılmadı."); return; }
+  const yon = fark>0 ? "artırma" : "azaltma";
+  // Onay ekranına git
+  document.getElementById("aktarim-son-ozet").innerHTML =
+    `<b>İşlem:</b> Nakit bakiye düzeltme (${yon})<br><b>Eski bakiye:</b> ${fmt(mevcut)}<br><b>Yeni bakiye:</b> <span style="color:var(--success);font-weight:700">${fmt(yeni)}</span><br><b>Fark:</b> <span style="color:${fark>0?'var(--success)':'var(--danger)'};font-weight:700">${fark>0?'+':''}${fmt(fark)}</span>`;
+  document.getElementById("nakit-duzenle-overlay").style.display="none";
+  document.getElementById("aktarim-onay-overlay").style.display="flex";
+  document.querySelector("#aktarim-onay-overlay .btn-save").onclick = async()=>{
+    document.getElementById("aktarim-onay-overlay").style.display="none";
+    showLoading(true);
+    const ts=new Date().toLocaleString("tr-TR");
+    const {data}=await db.from("logs").insert({
+      action:"nakit",
+      detail:"Bakiye düzeltme (" + yon + "): " + fmt(mevcut) + " → " + fmt(yeni),
+      target:"Fiziksel sayım",
+      user_name:currentUser, ts,
+      amount:fark
+    }).select();
+    if(data&&data[0]) nakitHareketler.unshift(data[0]);
+    await addLog("edit","Nakit bakiye düzeltme: "+fmt(fark),yon);
+    await sendTelegram("💵 <b>Nakit Bakiye Düzeltme</b>\n📊 Eski: " + fmt(mevcut) + "\n📊 Yeni: <b>" + fmt(yeni) + "</b>\n🔄 Fark: <b>" + (fark>0?"+":"") + fmt(fark) + "</b>\n⏰ " + ts + "\n👤 " + currentUser);
+    showLoading(false);
+    updateKasaMetrics();
+    showToast("✅ Nakit bakiye güncellendi!");
+    document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
+  };
+}
+
+// Nakit bakiye düzeltme (fiziksel sayım)
+async function nakitBakiyeDuzenle(){
+  const yeni = parseFloat(document.getElementById("nk-yeni-bakiye")?.value);
+  if(isNaN(yeni)){ showToast("⚠️ Geçerli bir tutar girin."); return; }
+  const mevcut = window._kasaNakit||0;
+  const fark = yeni - mevcut;
+  if(Math.abs(fark)<0.01){ showToast("ℹ️ Fark yok, güncelleme yapılmadı."); return; }
+  const yon = fark>0 ? "artırma" : "azaltma";
+  // Onay ekranına git
+  document.getElementById("aktarim-son-ozet").innerHTML =
+    `<b>İşlem:</b> Nakit bakiye düzeltme (${yon})<br><b>Eski bakiye:</b> ${fmt(mevcut)}<br><b>Yeni bakiye:</b> <span style="color:var(--success);font-weight:700">${fmt(yeni)}</span><br><b>Fark:</b> <span style="color:${fark>0?'var(--success)':'var(--danger)'};font-weight:700">${fark>0?'+':''}${fmt(fark)}</span>`;
+  document.getElementById("nakit-duzenle-overlay").style.display="none";
+  document.getElementById("aktarim-onay-overlay").style.display="flex";
+  document.querySelector("#aktarim-onay-overlay .btn-save").onclick = async()=>{
+    document.getElementById("aktarim-onay-overlay").style.display="none";
+    showLoading(true);
+    const ts=new Date().toLocaleString("tr-TR");
+    const {data}=await db.from("logs").insert({
+      action:"nakit",
+      detail:"Bakiye düzeltme (" + yon + "): " + fmt(mevcut) + " → " + fmt(yeni),
+      target:"Fiziksel sayım",
+      user_name:currentUser, ts,
+      amount:fark
+    }).select();
+    if(data&&data[0]) nakitHareketler.unshift(data[0]);
+    await addLog("edit","Nakit bakiye düzeltme: "+fmt(fark),yon);
+    await sendTelegram("💵 <b>Nakit Bakiye Düzeltme</b>\n📊 Eski: " + fmt(mevcut) + "\n📊 Yeni: <b>" + fmt(yeni) + "</b>\n🔄 Fark: <b>" + (fark>0?"+":"") + fmt(fark) + "</b>\n⏰ " + ts + "\n👤 " + currentUser);
+    showLoading(false);
+    updateKasaMetrics();
+    showToast("✅ Nakit bakiye güncellendi!");
+    document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
+  };
+}
+
+// Nakit bakiye düzeltme (fiziksel sayım)
+async function nakitBakiyeDuzenle(){
+  const yeni = parseFloat(document.getElementById("nk-yeni-bakiye")?.value);
+  if(isNaN(yeni)){ showToast("⚠️ Geçerli bir tutar girin."); return; }
+  const mevcut = window._kasaNakit||0;
+  const fark = yeni - mevcut;
+  if(Math.abs(fark)<0.01){ showToast("ℹ️ Fark yok, güncelleme yapılmadı."); return; }
+  const yon = fark>0 ? "artırma" : "azaltma";
+  // Onay ekranına git
+  document.getElementById("aktarim-son-ozet").innerHTML =
+    `<b>İşlem:</b> Nakit bakiye düzeltme (${yon})<br><b>Eski bakiye:</b> ${fmt(mevcut)}<br><b>Yeni bakiye:</b> <span style="color:var(--success);font-weight:700">${fmt(yeni)}</span><br><b>Fark:</b> <span style="color:${fark>0?'var(--success)':'var(--danger)'};font-weight:700">${fark>0?'+':''}${fmt(fark)}</span>`;
+  document.getElementById("nakit-duzenle-overlay").style.display="none";
+  document.getElementById("aktarim-onay-overlay").style.display="flex";
+  document.querySelector("#aktarim-onay-overlay .btn-save").onclick = async()=>{
+    document.getElementById("aktarim-onay-overlay").style.display="none";
+    showLoading(true);
+    const ts=new Date().toLocaleString("tr-TR");
+    const {data}=await db.from("logs").insert({
+      action:"nakit",
+      detail:"Bakiye düzeltme (" + yon + "): " + fmt(mevcut) + " → " + fmt(yeni),
+      target:"Fiziksel sayım",
+      user_name:currentUser, ts,
+      amount:fark
+    }).select();
+    if(data&&data[0]) nakitHareketler.unshift(data[0]);
+    await addLog("edit","Nakit bakiye düzeltme: "+fmt(fark),yon);
+    await sendTelegram("💵 <b>Nakit Bakiye Düzeltme</b>\n📊 Eski: " + fmt(mevcut) + "\n📊 Yeni: <b>" + fmt(yeni) + "</b>\n🔄 Fark: <b>" + (fark>0?"+":"") + fmt(fark) + "</b>\n⏰ " + ts + "\n👤 " + currentUser);
+    showLoading(false);
+    updateKasaMetrics();
+    showToast("✅ Nakit bakiye güncellendi!");
     document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
   };
 }
