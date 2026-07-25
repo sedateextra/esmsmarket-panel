@@ -2840,8 +2840,9 @@ async function aktarimKesinOnayla(){
   // Log kaydı
   await addLog("add", `${kaynakLabel} → ${hedefLabel}: ${fmt(tutar)}`, not||"Aktarım");
 
-  // Shopier'den aktarım yapıldıysa bekleyen sıfırla
+  // KAYNAK bakiyesinden düş
   if(_aktarimKaynak==="shopier"){
+    // Shopier'den aktarım: bekleyen tutarı sıfırla (planned_date'i geçmişe çek)
     const today=new Date();today.setHours(0,0,0,0);
     const yesterday=new Date(today);yesterday.setDate(today.getDate()-1);
     const yStr=yesterday.getFullYear()+"-"+String(yesterday.getMonth()+1).padStart(2,"0")+"-"+String(yesterday.getDate()).padStart(2,"0");
@@ -2855,9 +2856,30 @@ async function aktarimKesinOnayla(){
       await db.from("shopier_collections").update({planned_date:yStr}).eq("order_id",r.order_id);
       r.planned_date=yStr;
     }
+  } else if(_aktarimKaynak==="nakit"){
+    // Nakit'ten aktarım: logs tablosuna EKSİ nakit hareketi yaz
+    const {data:cikisData}=await db.from("logs").insert({
+      action:"nakit",
+      detail:`Aktarım çıkışı → ${hedefLabel}`,
+      target:not||hedefLabel,
+      user_name:currentUser,
+      ts,
+      amount:-tutar
+    }).select();
+    if(cikisData&&cikisData[0]) nakitHareketler.unshift(cikisData[0]);
+  } else if(_aktarimKaynak==="kripto"){
+    // Kripto'dan aktarım: expenses'a "Kripto Aktarım" gider olarak ekle
+    const {data:kExpData}=await db.from("expenses").insert({
+      type:"Kripto Aktarım",
+      amount:tutar,
+      note:`Kripto → ${hedefLabel}${not?" ("+not+")":""}`,
+      user_name:currentUser,
+      date:new Date().toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"})
+    }).select();
+    if(kExpData&&kExpData[0]) expenses.unshift(kExpData[0]);
   }
 
-  // Nakit kasaya log ekle (aktarım kaydı)
+  // Aktarım kaydı (log tablosuna, filtre/geçmiş için)
   await db.from("logs").insert({
     action:"aktarim",
     detail:`${kaynakLabel} → ${hedefLabel}`,
