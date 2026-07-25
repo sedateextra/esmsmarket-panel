@@ -1759,6 +1759,9 @@ async function saveCustomer(){
         reason:`Manuel bakiye düzenleme (${fmt(oldBal)} → ${fmt(balance)})`,
         user_name:currentUser
       });
+      // Telegram bildirim
+      const fark = balance - oldBal;
+      await sendTelegram(`✏️ <b>Üye Bakiye Düzenleme</b>\n━━━━━━━━━━━━━━\n👤 Üye: <b>${name}</b>\n📊 Eski bakiye: ${fmt(oldBal)}\n💰 Yeni bakiye: <b>${fmt(balance)}</b>\n🔄 Fark: <b>${fark>=0?'+':''}${fmt(fark)}</b>\n⏰ ${new Date().toLocaleString("tr-TR")}\n👤 ${currentUser}`);
     }
     addLog("edit","Üye güncellendi",name);
   } else {
@@ -2732,6 +2735,9 @@ async function deleteTx(txId, custId, amount, bonus){
   const tx = transactions.find(t=>t.id===txId);
   if(tx) tx.cancelled=true;
   addLog("delete","Kasa işlemi silindi",txId);
+  // Telegram bildirim
+  const tipEmoji = tx?.type==="Havale"?"🏦":tx?.type==="Kripto"?"₿":tx?.type==="Shopier"?"🤖":"💰";
+  await sendTelegram(`🗑️ <b>Kasa İşlemi Silindi</b>\n━━━━━━━━━━━━━━\n${tipEmoji} Tür: <b>${tx?.type||"—"}</b>\n👤 Üye: <b>${tx?.cust_name||cust?.name||"—"}</b>\n💰 Tutar: <b>${fmt(amount)}</b>\n🎁 Bonus: ${fmt(bonus)}\n📊 Toplam düşülen: <b>${fmt(amount+bonus)}</b>\n⏰ ${new Date().toLocaleString("tr-TR")}\n👤 Silen: ${currentUser}`);
   showLoading(false);
   updateKasaMetrics();
   renderCustomers();
@@ -2740,10 +2746,13 @@ async function deleteTx(txId, custId, amount, bonus){
 
 async function deleteExpense(expId){
   if(!confirm("Bu gideri silmek istediğinize emin misiniz?")) return;
+  const exp = expenses.find(e=>e.id===expId);
   showLoading(true);
   await db.from("expenses").delete().eq("id",expId);
   expenses = expenses.filter(e=>e.id!==expId);
   addLog("delete","Gider silindi",expId);
+  // Telegram bildirim
+  await sendTelegram(`🗑️ <b>Gider Silindi</b>\n━━━━━━━━━━━━━━\n📉 Tür: <b>${exp?.type||"—"}</b>\n💰 Tutar: <b>${fmt(exp?.amount||0)}</b>\n📝 Not: ${exp?.note||"—"}\n⏰ ${new Date().toLocaleString("tr-TR")}\n👤 Silen: ${currentUser}`);
   showLoading(false);
   updateKasaMetrics();
   showToast("✅ Gider silindi.");
@@ -3522,9 +3531,8 @@ function renderChart(){
       labels,
       datasets:[
         {label:"🏦 Havale",data:havaleData,backgroundColor:"rgba(59,130,246,0.75)",borderRadius:3,stack:"s"},
-        {label:"🤖 Shopier",data:shopierData,backgroundColor:"rgba(16,185,129,0.75)",borderRadius:3,stack:"s"},
         {label:"₿ Kripto",data:kriptoData,backgroundColor:"rgba(245,158,11,0.75)",borderRadius:3,stack:"s"},
-        {label:"📊 Tahsilat",data:tahsilatData,backgroundColor:"rgba(139,92,246,0.6)",borderRadius:3,stack:"s"},
+        {label:"📊 Shopier Tahsilat",data:tahsilatData,backgroundColor:"rgba(16,185,129,0.75)",borderRadius:3,stack:"s"},
       ]
     },
     options:{
