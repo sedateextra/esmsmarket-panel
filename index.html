@@ -3865,7 +3865,7 @@ function updateXLStats(){
 
 function renderRaporlar(){
   const active=transactions.filter(t=>!t.cancelled);
-  // Shopier tahsilatlarını da ekle (saat parse + otomatik bonus hesabı)
+  // Shopier tahsilatlarını da ekle (saat + 2 haneli yıl + otomatik bonus)
   const scItems=(shopierCollections||[]).map(r=>{
     const raw=(r.payment_date||r.order_date||"").trim();
     let ca=null;
@@ -3873,9 +3873,22 @@ function renderRaporlar(){
       const parts=raw.split(/\s+/);
       const p=parts[0].split(/[\/\-]/);
       const [hh,mm]=(parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
-      if(p.length===3) ca=p[0].length===4?new Date(p[0],p[1]-1,p[2],hh,mm):new Date(p[2],p[1]-1,p[0],hh,mm);
+      if(p.length===3){
+        const y2 = p[2].length===2 ? 2000+parseInt(p[2]) : parseInt(p[2]);
+        ca = p[0].length===4
+          ? new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]), hh, mm)
+          : new Date(y2, parseInt(p[1])-1, parseInt(p[0]), hh, mm);
+      }
     }
     const isoStr = (ca && !isNaN(ca.getTime())) ? ca.toISOString() : null;
+    return {
+      amount:r.collection||0,
+      type:"Shopier Tahsilat",
+      created_at:isoStr,
+      date:raw.substring(0,10),
+      cust_name:r.cust_name||r.customer_name||"Shopier",
+      cust_id:r.cust_id||("shopier-"+(r.customer_email||r.customer_name||"")),
+      bonus:calcBonusAmt(r.collection||0,"Shopier") ca.toISOString() : null;
     return {
       amount:r.collection||0,
       type:"Shopier Tahsilat",
