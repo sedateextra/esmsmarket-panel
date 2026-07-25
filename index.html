@@ -936,11 +936,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
       <div id="kasa-table-wrap">
         <table><colgroup><col style="width:16%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:13%"><col style="width:25%"></colgroup>
-          rows=txRows.map(t=>{
-      const ts=t.created_at?new Date(t.created_at).getTime():0;
-      const userBadge=t.user_name==="shopier-bot"?"🤖 Bot":"👤 "+(t.user_name||"—");
-      return "<tr data-ts='"+ts+"' data-amt='"+t.amount+"'><td style='font-weight:600'>"+t.cust_name+"</td><td><span class='tbadge' style='background:"+( typeColors[t.type]||"rgba(139,92,246,.15)")+"'>"+t.type+"</span></td><td style='color:var(--success);font-weight:700'>"+fmt(t.amount)+"</td><td style='color:var(--warning)'>"+( t.bonus>0?fmt(t.bonus):"—")+"</td><td>"+srcBadge(t)+"</td><td style='color:var(--text3);font-size:11px'>"+formatTarihGun(t.date,t.created_at)+"</td><td style='font-size:11px;color:var(--purple);font-weight:600'>"+userBadge+"</td><td style='color:var(--text3);font-size:11px'>"+(t.note||"—")+"</td><td><button onclick='deleteTx(\""+t.id+"\",\""+t.cust_id+"\","+t.amount+","+t.bonus+")' style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px' title='Sil'><i class='ti ti-trash'></i></button></td></tr>";
-    });
+          
           <tbody id="kasa-body"></tbody>
         </table>
       </div>
