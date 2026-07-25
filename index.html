@@ -350,10 +350,6 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       <i class="ti ti-chart-bar" style="font-size:16px"></i>
       <span>Raporlar</span>
     </button>
-    <button onclick="showPage('mail',this)">
-      <i class="ti ti-mail" style="font-size:16px"></i>
-      <span>Mail</span>
-    </button>
     <button onclick="showPage('log',this)">
       <i class="ti ti-list-details" style="font-size:16px"></i>
       <span>Log</span>
@@ -1183,53 +1179,6 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
   </div>
 
-  <!-- MAİL KAMPANYALARI -->
-  <div id="page-mail" class="page">
-    <!-- Üst metrikler -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
-      <div class="metric"><div class="lbl"><i class="ti ti-mail-forward" style="color:var(--info)"></i>Bekleyen — Karşılama</div><div class="val" id="ml-pending-welcome" style="color:var(--info)">0</div><div class="sub">Bugün üye olanlar</div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-mail-heart" style="color:var(--purple)"></i>Bekleyen — 7. gün</div><div class="val" id="ml-pending-day7" style="color:var(--purple)">0</div><div class="sub">7 gün önce üye olanlar</div></div>
-      <div class="metric"><div class="lbl"><i class="ti ti-mail-exclamation" style="color:var(--warning)"></i>Bekleyen — Reaktivasyon</div><div class="val" id="ml-pending-react" style="color:var(--warning)">0</div><div class="sub">Bakiye ≤50 TL & 7+ gün inaktif</div></div>
-      <div class="metric metric-accent"><div class="lbl"><i class="ti ti-mail-check"></i>Son 30 gün gönderilen</div><div class="val" id="ml-sent-30d">0</div><div class="sub">Başarılı</div></div>
-    </div>
-
-    <!-- Manuel çalıştırma butonları -->
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-title"><div class="card-title-left"><i class="ti ti-send"></i>Manuel çalıştır</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="runMailCampaign('welcome')" style="flex:1;min-width:180px;font-size:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(59,130,246,.4);background:rgba(59,130,246,.1);color:var(--info);cursor:pointer;font-weight:600"><i class="ti ti-mail-forward" style="margin-right:5px"></i>Karşılama maillerini gönder</button>
-        <button onclick="runMailCampaign('day7')" style="flex:1;min-width:180px;font-size:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:var(--purple);cursor:pointer;font-weight:600"><i class="ti ti-mail-heart" style="margin-right:5px"></i>7. gün maillerini gönder</button>
-        <button onclick="runMailCampaign('reactivation')" style="flex:1;min-width:180px;font-size:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--warning);cursor:pointer;font-weight:600"><i class="ti ti-mail-exclamation" style="margin-right:5px"></i>Reaktivasyon maillerini gönder</button>
-      </div>
-      <div id="ml-run-result" style="margin-top:12px;font-size:12px;color:var(--text3)"></div>
-    </div>
-
-    <!-- Aday listeleri -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
-      <div class="card" style="margin-bottom:0">
-        <div class="card-title"><div class="card-title-left"><i class="ti ti-mail-forward" style="color:var(--info)"></i>Karşılama adayları</div></div>
-        <div id="ml-list-welcome" style="max-height:280px;overflow-y:auto;font-size:12px"></div>
-      </div>
-      <div class="card" style="margin-bottom:0">
-        <div class="card-title"><div class="card-title-left"><i class="ti ti-mail-heart" style="color:var(--purple)"></i>7. gün adayları</div></div>
-        <div id="ml-list-day7" style="max-height:280px;overflow-y:auto;font-size:12px"></div>
-      </div>
-      <div class="card" style="margin-bottom:0">
-        <div class="card-title"><div class="card-title-left"><i class="ti ti-mail-exclamation" style="color:var(--warning)"></i>Reaktivasyon adayları</div></div>
-        <div id="ml-list-react" style="max-height:280px;overflow-y:auto;font-size:12px"></div>
-      </div>
-    </div>
-
-    <!-- Gönderim geçmişi -->
-    <div class="card">
-      <div class="card-title"><div class="card-title-left"><i class="ti ti-history"></i>Son gönderimler</div></div>
-      <table><colgroup><col style="width:18%"><col style="width:20%"><col style="width:25%"><col style="width:15%"><col style="width:22%"></colgroup>
-        <thead><tr><th>Tarih</th><th>Üye</th><th>E-posta</th><th>Kampanya</th><th>Durum</th></tr></thead>
-        <tbody id="ml-log-body"></tbody>
-      </table>
-      <div id="ml-no-log" style="text-align:center;padding:1.5rem;font-size:12px;color:var(--text3)">Henüz mail gönderilmedi.</div>
-    </div>
-  </div>
   <!-- LOG -->
   <div id="page-log" class="page">
     <div class="srow" style="margin-bottom:10px">
@@ -1643,7 +1592,6 @@ function showPage(id,btn){
   }
   if(id==="top10") renderTop10();
   if(id==="raporlar") renderRaporlar();
-  if(id==="mail") renderMailPage();
   if(id==="bonus-rules") renderBonusRulesEditor();
   if(id==="dashboard") setTimeout(renderDashboard,50);
 
@@ -3940,13 +3888,6 @@ function renderRaporlar(){
       date:raw.substring(0,10),
       cust_name:r.cust_name||r.customer_name||"Shopier",
       cust_id:r.cust_id||("shopier-"+(r.customer_email||r.customer_name||"")),
-      bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier") ca.toISOString() : null;
-    return {
-      amount:r.collection||0,
-      type:"Shopier Tahsilat",
-      created_at:isoStr,
-      date:raw.substring(0,10),
-      cust_name:r.cust_name||r.customer_name||"Shopier",
       bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier")
     };
   });
@@ -4104,117 +4045,6 @@ function renderRaporlar(){
 }
 
 // ============================================================
-// ============================================================
-// MAİL KAMPANYALARI
-// ============================================================
-const MAIL_FN_URL = "https://ngfvvsrnnyotbwrdvxjl.supabase.co/functions/v1/mail-campaigns";
-
-async function renderMailPage(){
-  const now = new Date();
-  const today = new Date(); today.setHours(0,0,0,0);
-  const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
-  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7); weekAgo.setHours(0,0,0,0);
-  const day8 = new Date(weekAgo); day8.setDate(day8.getDate()+1);
-  const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate()-30);
-
-  // Karşılama adayları: son 24 saatte üye + welcome_sent_at null
-  const welcomeCand = customers.filter(c=>{
-    if(!c.email||c.welcome_sent_at) return false;
-    if(!c.created_at) return false;
-    return new Date(c.created_at) >= yesterday;
-  });
-
-  // 7. gün: 7 gün önce üye + day7_sent_at null
-  const day7Cand = customers.filter(c=>{
-    if(!c.email||c.day7_sent_at) return false;
-    if(!c.created_at) return false;
-    const d = new Date(c.created_at);
-    return d >= weekAgo && d < day8;
-  });
-
-  // Reaktivasyon: bakiye ≤50 + son 7 gün yükleme yok + son 30 gün mail gitmemiş
-  const reactCand = customers.filter(c=>{
-    if(!c.email) return false;
-    if((c.balance||0) > 50) return false;
-    if(c.reactivation_sent_at && new Date(c.reactivation_sent_at) > monthAgo) return false;
-    // Son 7 gün transaction var mı?
-    const recentTx = transactions.find(t=>t.cust_id===c.id && !t.cancelled && t.created_at && new Date(t.created_at)>weekAgo);
-    return !recentTx;
-  });
-
-  // Metrikler
-  const $s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  $s("ml-pending-welcome", welcomeCand.length);
-  $s("ml-pending-day7", day7Cand.length);
-  $s("ml-pending-react", reactCand.length);
-
-  // Son 30 gün gönderilen
-  try {
-    const {data:sent30} = await db.from("mail_log").select("id",{count:"exact",head:false}).eq("status","sent").gte("sent_at", monthAgo.toISOString());
-    $s("ml-sent-30d", (sent30||[]).length);
-  } catch(e){ $s("ml-sent-30d","—"); }
-
-  // Aday listeleri
-  const renderList = (el,list) => {
-    if(!el) return;
-    if(!list.length){ el.innerHTML='<div style="padding:1rem;text-align:center;color:var(--text3)">Aday yok.</div>'; return; }
-    el.innerHTML = list.slice(0,50).map(c=>`
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name||"—"}</div>
-          <div style="font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.email||"—"}</div>
-        </div>
-        <div style="font-size:11px;color:var(--success);font-weight:600">${fmt(c.balance||0)}</div>
-      </div>`).join("");
-  };
-  renderList(document.getElementById("ml-list-welcome"), welcomeCand);
-  renderList(document.getElementById("ml-list-day7"), day7Cand);
-  renderList(document.getElementById("ml-list-react"), reactCand);
-
-  // Gönderim geçmişi
-  try {
-    const {data:logs2} = await db.from("mail_log").select("*").order("sent_at",{ascending:false}).limit(100);
-    const tbody = document.getElementById("ml-log-body");
-    const noLog = document.getElementById("ml-no-log");
-    if(!logs2||!logs2.length){
-      if(noLog) noLog.style.display="block";
-      if(tbody) tbody.innerHTML="";
-    } else {
-      if(noLog) noLog.style.display="none";
-      const campEmoji = {welcome:"👋 Karşılama", day7:"💜 7. gün", reactivation:"🎁 Reaktivasyon"};
-      if(tbody) tbody.innerHTML = logs2.map(l=>`
-        <tr>
-          <td style="font-size:11px;color:var(--text3)">${new Date(l.sent_at).toLocaleString("tr-TR")}</td>
-          <td style="font-size:11px;font-weight:600">${l.cust_name||"—"}</td>
-          <td style="font-size:11px;color:var(--text2)">${l.cust_email||"—"}</td>
-          <td style="font-size:11px">${campEmoji[l.campaign]||l.campaign}</td>
-          <td style="font-size:11px">${l.status==="sent"?'<span style="color:var(--success);font-weight:600">✅ Gönderildi</span>':'<span style="color:var(--danger);font-weight:600">❌ Hata</span>'}</td>
-        </tr>`).join("");
-    }
-  } catch(e){ console.error(e); }
-}
-
-async function runMailCampaign(campaign){
-  if(!confirm(`"${campaign}" kampanyası çalıştırılacak. Bekleyen tüm adaylara mail gidecek. Onaylıyor musunuz?`)) return;
-  const resultEl = document.getElementById("ml-run-result");
-  if(resultEl) resultEl.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Gönderiliyor...';
-  try {
-    const res = await fetch(MAIL_FN_URL+"?campaign="+campaign);
-    const data = await res.json();
-    if(data.ok){
-      const r = data.results[0];
-      if(resultEl) resultEl.innerHTML = `<span style="color:var(--success)">✅ ${r.sent} gönderildi</span> · <span style="color:var(--danger)">${r.failed} hata</span> · <span style="color:var(--text3)">${(r.skipped||0)} atlandı · Toplam ${r.total}</span>`;
-      showToast(`✅ ${r.sent} mail gönderildi (${r.failed} hata)`);
-      await sendTelegram(`📧 <b>Mail Kampanyası</b>\n━━━━━━━━━━━━━━\n📤 Kampanya: <b>${campaign}</b>\n✅ Gönderilen: <b>${r.sent}</b>\n❌ Hatalı: ${r.failed}\n⏭️ Atlanan: ${r.skipped||0}\n👤 ${currentUser}`);
-      await loadAll();
-      renderMailPage();
-    } else {
-      if(resultEl) resultEl.innerHTML = '<span style="color:var(--danger)">❌ Hata: '+data.error+'</span>';
-    }
-  } catch(e){
-    if(resultEl) resultEl.innerHTML = '<span style="color:var(--danger)">❌ Bağlantı hatası: '+e.message+'</span>';
-  }
-}
 // LOG
 // ============================================================
 function renderLog(){
