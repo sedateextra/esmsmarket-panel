@@ -727,6 +727,25 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
     </div>
 
+    <!-- KRİPTO DÜZENLEME MODALI -->
+    <div id="kripto-duzenle-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
+      <div class="modal" style="max-width:460px">
+        <div class="modal-hdr"><h3>₿ Kripto Düzenle</h3><button onclick="document.getElementById('kripto-duzenle-overlay').style.display='none'"><i class="ti ti-x"></i></button></div>
+        <div style="padding:12px;background:var(--card2);border-radius:10px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;color:var(--text2)">Mevcut kripto bakiye</span>
+            <span style="font-size:15px;font-weight:700;color:var(--warning)" id="kr-mevcut-tutar">₺0</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="kr-yeni-bakiye" placeholder="Yeni bakiye (₺)" style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+            <button onclick="kriptoBakiyeDuzenle()" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--warning);cursor:pointer;font-weight:600"><i class="ti ti-check"></i> Bakiyeyi Güncelle</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">💡 Fiziksel sayım sonucuna göre bakiyeyi düzelt (fark log'a yazılır)</div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Son kripto işlemleri</div>
+        <div id="kr-list" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+    </div>
     <!-- NAKİT DÜZENLEME MODALI -->
     <div id="nakit-duzenle-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
       <div class="modal" style="max-width:460px">
@@ -2890,7 +2909,68 @@ async function aktarimKesinOnayla(){
 
 // Nakit düzenleme
 // Kripto bakiye düzeltme
-async function openKriptoDuzenle(){
+// Kripto düzenle
+function openKriptoDuzenle(){
+  const mevcut = window._kasaKripto||0;
+  const el = document.getElementById("kr-mevcut-tutar");
+  if(el) el.textContent = fmt(mevcut);
+  const inp = document.getElementById("kr-yeni-bakiye");
+  if(inp) inp.value = "";
+  // Son kripto hareketleri
+  const krTx = transactions.filter(t=>!t.cancelled && t.type==="Kripto")
+    .map(t=>({d:t.cust_name,ts:t.date||"",u:t.user_name||"",a:t.amount,kaynak:"in"}));
+  const krExp = expenses.filter(e=>e.type==="Kripto Aktarım")
+    .map(e=>({d:e.note||"Aktarım çıkışı",ts:e.date||"",u:e.user_name||"",a:-e.amount,kaynak:"out"}));
+  const all = [...krTx, ...krExp].sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
+  const list = document.getElementById("kr-list");
+  if(list) list.innerHTML = all.length
+    ? all.slice(0,50).map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px">${n.kaynak==="in"?"₿":"📤"}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.d}</div><div style="font-size:10px;color:var(--text3)">${n.ts} · ${n.u}</div></div>
+        <div style="font-size:13px;font-weight:700;color:${n.a>=0?"var(--warning)":"var(--danger)"}">${n.a>=0?"":"-"}${fmt(Math.abs(n.a))}</div>
+      </div>`).join("")
+    : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:1rem">Kripto hareketi yok.</div>';
+  document.getElementById("kripto-duzenle-overlay").style.display = "flex";
+}
+
+async function kriptoBakiyeDuzenle(){
+  const yeni = parseFloat(document.getElementById("kr-yeni-bakiye")?.value);
+  if(isNaN(yeni)){ showToast("⚠️ Geçerli bir tutar girin."); return; }
+  const mevcut = window._kasaKripto||0;
+  const fark = yeni - mevcut;
+  if(Math.abs(fark)<0.01){ showToast("ℹ️ Fark yok."); return; }
+  const yon = fark>0 ? "artırma" : "azaltma";
+  // Onay ekranı
+  document.getElementById("aktarim-son-ozet").innerHTML =
+    `<b>İşlem:</b> Kripto bakiye düzeltme (${yon})<br><b>Eski bakiye:</b> ${fmt(mevcut)}<br><b>Yeni bakiye:</b> <span style="color:var(--warning);font-weight:700">${fmt(yeni)}</span><br><b>Fark:</b> <span style="color:${fark>0?'var(--success)':'var(--danger)'};font-weight:700">${fark>0?'+':''}${fmt(fark)}</span>`;
+  document.getElementById("kripto-duzenle-overlay").style.display="none";
+  document.getElementById("aktarim-onay-overlay").style.display="flex";
+  document.querySelector("#aktarim-onay-overlay .btn-save").onclick = async()=>{
+    document.getElementById("aktarim-onay-overlay").style.display="none";
+    showLoading(true);
+    const ts = new Date().toLocaleString("tr-TR");
+    const dateStr = new Date().toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+    if(fark>0){
+      await db.from("transactions").insert({
+        cust_id:0, cust_name:"Kripto Düzeltme", amount:fark, bonus:0, type:"Kripto",
+        note:"Bakiye düzeltme (artırma)", user_name:currentUser, date:dateStr
+      });
+    } else {
+      await db.from("expenses").insert({
+        type:"Kripto Aktarım", amount:Math.abs(fark),
+        note:"Bakiye düzeltme (azaltma)",
+        user_name:currentUser, date:dateStr
+      });
+    }
+    await addLog("edit","Kripto bakiye düzeltme: "+fmt(fark),"Fiziksel sayım");
+    await sendTelegram("₿ <b>Kripto Bakiye Düzeltme</b>\n📊 Eski: "+fmt(mevcut)+"\n📊 Yeni: <b>"+fmt(yeni)+"</b>\n🔄 Fark: <b>"+(fark>0?"+":"")+fmt(fark)+"</b>\n⏰ "+ts+"\n👤 "+currentUser);
+    await loadAll();
+    updateKasaMetrics();
+    showLoading(false);
+    showToast("✅ Kripto bakiyesi güncellendi!");
+    document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
+  };
+}
   const mevcut = window._kasaKripto||0;
   const yeni = prompt("Kripto bakiye düzeltme\n\nMevcut: "+fmt(mevcut)+"\n\nYeni bakiye girin (₺):", mevcut.toFixed(2));
   if(yeni===null) return;
