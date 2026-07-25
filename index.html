@@ -1224,6 +1224,10 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const HERO_KEY = "6bAcA64fAc5373ddA7d49c488452A5c2";
 const HERO_BASE = "https://hero-sms.com/stubs/handler_api.php?api_key="+HERO_KEY;
+const PAGE_SIZE = 25;
+const USD_TRY = 47.63;
+const PRICE_USD = 1.02;
+const PRICE_TRY = PRICE_USD * USD_TRY;
 
 // ============================================================
 // TELEGRAM
@@ -2394,24 +2398,24 @@ function updateKasaMetrics(){
   const shopierTxCount=active.filter(t=>t.user_name==="shopier-bot"||t.type==="Shopier").length;
   const manuelTxCount=active.length-shopierTxCount;
 
-  document.getElementById("k-income").textContent=fmt(totalIncome);
+  const $set = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  $set("k-income", fmt(totalIncome));
   const incSub=document.getElementById("k-income-sub");
   if(incSub) incSub.textContent=active.length+" işlem · "+shopierTxCount+" Shopier";
-  document.getElementById("k-bonus").textContent=fmt(totalBonus);
+  $set("k-bonus", fmt(totalBonus));
   const bonusSub=document.getElementById("k-bonus-sub");
   if(bonusSub) bonusSub.textContent=active.filter(t=>t.bonus>0).length+" işlemde bonus";
-  document.getElementById("k-expense").textContent=fmt(totalExpense);
+  $set("k-expense", fmt(totalExpense));
   const expSub=document.getElementById("k-expense-sub");
   if(expSub) expSub.textContent=expenses.length+" gider kaydı";
-  document.getElementById("k-komisyon").textContent=fmt(shopierKomTotal);
+  $set("k-komisyon", fmt(shopierKomTotal));
   const komSub=document.getElementById("k-komisyon-sub");
   if(komSub) komSub.textContent=expenses.filter(e=>e.type==="Shopier Komisyon").length+" kesinti";
-  document.getElementById("k-uye-count").textContent=uyeCount;
+  $set("k-uye-count", uyeCount);
   const uyeSub=document.getElementById("k-uye-sub");
   if(uyeSub) uyeSub.textContent=manuelTxCount+" manuel · "+shopierTxCount+" Shopier";
-  document.getElementById("k-net").textContent=fmt(net);
-  document.getElementById("k-net").style.color=net>=0?"var(--success)":"var(--danger)";
-  // Nakit kasa
+  const kNetEl=document.getElementById("k-net");
+  if(kNetEl){ kNetEl.textContent=fmt(net); kNetEl.style.color=net>=0?"var(--success)":"var(--danger)"; }
   // Nakit kasa = nakit hareketleri + havale işlemleri
   const nakitLogToplam=(nakitHareketler||[]).reduce((s,n)=>s+(n.amount||0),0);
   const havaletoplam=active.filter(t=>t.type==="Havale"||t.type==="Havale/EFT").reduce((s,t)=>s+t.amount,0);
@@ -3050,7 +3054,8 @@ function renderChart(){
     const raw=r.payment_date||r.order_date||"";
     let ca=null;
     if(raw){const p=raw.trim().split(/[\/\-]/);if(p.length===3)ca=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);}
-    return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:ca?ca.toISOString():null};
+    const isoStr = (ca && !isNaN(ca.getTime())) ? ca.toISOString() : null;
+    return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:isoStr};
   });
   const allItems=[...active,...scItems];
   const now2=new Date();
@@ -3451,7 +3456,8 @@ function renderRaporlar(){
     const raw=r.payment_date||r.order_date||"";
     let ca=null;
     if(raw){const p=raw.trim().split(/[\/\-]/);if(p.length===3)ca=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);}
-    return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:ca?ca.toISOString():null,date:raw.substring(0,10),cust_name:r.cust_name||r.customer_name||"Shopier",bonus:0};
+    const isoStr = (ca && !isNaN(ca.getTime())) ? ca.toISOString() : null;
+    return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:isoStr,date:raw.substring(0,10),cust_name:r.cust_name||r.customer_name||"Shopier",bonus:0};
   });
   const allItems=[...active,...scItems];
   const GUNLER=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
