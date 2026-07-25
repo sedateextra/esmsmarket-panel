@@ -4111,16 +4111,37 @@ async function saveBorc(){
   const note = document.getElementById("borc-note").value.trim();
   if(!name||!amount){alert("İsim ve borç tutarı zorunludur.");return;}
   showLoading(true);
+  const ts = new Date().toLocaleString("tr-TR");
   if(borcEditId){
-    await db.from("borclar").update({name,amount,paid,due,status,note}).eq("id",borcEditId);
+    // Eski tutar
     const b = borclar.find(x=>x.id===borcEditId);
+    const eskiTutar = b?.amount||0;
+    const fark = amount - eskiTutar;
+    // Aynı kişinin diğer aktif borçları (toplam borç)
+    const kisiTumBorclar = borclar.filter(x=>x.name===name).reduce((s,x)=>{
+      // Bu düzenlenen borç yeni tutarla, diğerleri eski tutarla
+      if(x.id===borcEditId) return s+amount;
+      return s+(x.amount||0);
+    },0);
+    await db.from("borclar").update({name,amount,paid,due,status,note}).eq("id",borcEditId);
     Object.assign(b,{name,amount,paid,due,status,note});
     addLog("edit","Borç güncellendi — "+fmt(amount),name);
+    // Telegram bildirim
+    let bildirim = `📝 <b>Borç Düzenlendi</b>\n━━━━━━━━━━━━━━\n👤 Kişi: <b>${name}</b>\n📊 Eski tutar: ${fmt(eskiTutar)}\n💰 Yeni tutar: <b>${fmt(amount)}</b>\n🔄 Fark: <b style="color:${fark>=0?'green':'red'}">${fark>=0?'+':''}${fmt(fark)}</b>\n💼 ${name} toplam borç: <b>${fmt(kisiTumBorclar)}</b>`;
+    if(note) bildirim += `\n📝 Not: ${note}`;
+    bildirim += `\n⏰ ${ts}\n👤 ${currentUser}`;
+    await sendTelegram(bildirim);
   } else {
     const newB = {name,amount,paid:paid||0,due,status,note,payments:[]};
     const {data} = await db.from("borclar").insert(newB).select();
     if(data&&data[0]) borclar.unshift({...data[0], payments: data[0].payments||[]});
     addLog("add","Borçlu eklendi — "+fmt(amount),name);
+    // Yeni borç: kişinin toplam borç durumu
+    const kisiTumBorclar = borclar.filter(x=>x.name===name).reduce((s,x)=>s+(x.amount||0),0);
+    let bildirim = `➕ <b>Yeni Borç Eklendi</b>\n━━━━━━━━━━━━━━\n👤 Kişi: <b>${name}</b>\n💰 Eklenen borç: <b>${fmt(amount)}</b>\n💼 ${name} toplam borç: <b>${fmt(kisiTumBorclar)}</b>`;
+    if(note) bildirim += `\n📝 Not: ${note}`;
+    bildirim += `\n⏰ ${ts}\n👤 ${currentUser}`;
+    await sendTelegram(bildirim);
   }
   showLoading(false);
   closeBorcModal();
