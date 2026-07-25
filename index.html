@@ -384,16 +384,11 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="sub">Gelir - Bonus - Gider</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-users" style="color:var(--info)"></i>Bakiyeli üye</div>
         <div class="val" id="db-active-members" style="color:var(--info)">0</div>
         <div class="sub" id="db-today-new">Bugün yeni: 0</div>
-      </div>
-      <div class="metric" style="position:relative">
-        <div class="lbl"><i class="ti ti-gift" style="color:var(--warning)"></i>Bonus maliyeti</div>
-        <div class="val" id="db-total-bonus" style="color:var(--warning)">₺0</div>
-        <div class="sub" id="db-bonus-count">0 işlemde</div>
       </div>
       <div class="metric" style="position:relative">
         <div class="lbl"><i class="ti ti-arrow-down-circle" style="color:var(--danger)"></i>Toplam gider</div>
@@ -407,24 +402,7 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
       </div>
     </div>
 
-    <!-- Hero SMS günlük stats -->
-    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-check-circle" style="color:var(--success)"></i>Bugün başarılı aktivasyon</div>
-        <div class="val" id="db-hero-success" style="color:var(--success)">—</div>
-        <div class="sub">Hero SMS</div>
-      </div>
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-circle-x" style="color:var(--danger)"></i>Bugün iptal/iade</div>
-        <div class="val" id="db-hero-cancel" style="color:var(--danger)">—</div>
-        <div class="sub">Hero SMS</div>
-      </div>
-      <div class="metric">
-        <div class="lbl"><i class="ti ti-wallet" style="color:var(--warning)"></i>Bugün harcanan</div>
-        <div class="val" id="db-hero-spent" style="color:var(--warning)">—</div>
-        <div class="sub">Hero SMS</div>
-      </div>
-    </div>
+    
 
     <!-- ORTA: Grafikler + Canlı akış -->
     <div style="display:grid;grid-template-columns:1fr 1fr 300px;gap:12px;margin-bottom:12px">
@@ -2395,15 +2373,19 @@ function setKasaTab(tab, btn){
 
 function updateKasaMetrics(){
   const active=transactions.filter(t=>!t.cancelled);
-  // Shopier tahsilatlarını ayrıca hesapla (transactions'da zaten var, çift sayma)
-  const totalIncome=active.reduce((s,t)=>s+t.amount,0);
-  const totalBonus=active.reduce((s,t)=>s+t.bonus,0);
+  // Shopier tahsilatlarını da geliri dahil et
+  const scList = shopierCollections||[];
+  const shopierTahsilatToplam = scList.reduce((s,r)=>s+(r.collection||0),0);
+  // Her tahsilata bonus kuralına göre otomatik bonus hesapla (Shopier tipi kuralı)
+  const shopierTahsilatBonus = scList.reduce((s,r)=>s+calcBonusAmt(r.collection||0,"Shopier"),0);
+  const totalIncome=active.reduce((s,t)=>s+t.amount,0) + shopierTahsilatToplam;
+  const totalBonus=active.reduce((s,t)=>s+t.bonus,0) + shopierTahsilatBonus;
   const totalExpense=expenses.reduce((s,e)=>s+e.amount,0);
   const net=totalIncome-totalBonus-totalExpense;
   const shopierKomTotal=expenses.filter(e=>e.type==="Shopier Komisyon").reduce((s,e)=>s+e.amount,0);
-  const uyeCount=new Set(active.map(t=>t.cust_id)).size;
-  const shopierTxCount=active.filter(t=>t.user_name==="shopier-bot"||t.type==="Shopier").length;
-  const manuelTxCount=active.length-shopierTxCount;
+  const uyeCount=new Set([...active.map(t=>t.cust_id), ...scList.map(r=>r.cust_id).filter(Boolean)]).size;
+  const shopierTxCount = active.filter(t=>t.user_name==="shopier-bot"||t.type==="Shopier").length + scList.length;
+  const manuelTxCount=active.length - active.filter(t=>t.user_name==="shopier-bot"||t.type==="Shopier").length;
 
   const $set = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
   $set("k-income", fmt(totalIncome));
@@ -2550,8 +2532,10 @@ function updateKasaMetrics(){
       const p = dateStr.split(".");
       if(p.length===3) d = new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
     }
-    if(!d||isNaN(d)) return dateStr||"—";
-    return dateStr + " <span style='color:var(--purple);font-size:10px;font-weight:600'>" + GUNLER[d.getDay()] + "</span>";
+    if(!d||isNaN(d.getTime())) return dateStr||"—";
+    const dateStr2 = d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+    const timeStr  = d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+    return dateStr2 + " <span style='color:var(--purple);font-size:10px;font-weight:600'>" + GUNLER[d.getDay()] + "</span> <span style='color:var(--text3);font-size:10px'>" + timeStr + "</span>";
   };
 
   const typeColors = {"Havale":"rgba(59,130,246,.2)","Shopier Tahsilat":"rgba(16,185,129,.2)","Kripto":"rgba(245,158,11,.2)"};
@@ -2578,18 +2562,25 @@ function updateKasaMetrics(){
     if(q) scFiltered=scFiltered.filter(r=>(r.cust_name||r.customer_name||"").toLowerCase().includes(q));
     if(filterFrom||filterTo) scFiltered=scFiltered.filter(r=>inDateRange(r.payment_date||r.order_date));
     const colRows = scFiltered.map(r=>{
-      const rawTarih = r.payment_date||r.order_date||"";
-      const tarihStr = rawTarih.substring(0,10);
-      // Gün hesapla
-      let gunStr = "";
+      const rawTarih = (r.payment_date||r.order_date||"").trim();
+      // Gün + saat parse
+      let gunStr = "", timeStr = "", tarihStr = rawTarih.substring(0,10);
       if(rawTarih){
-        const p=rawTarih.trim().split(/[\/\-]/);
-        let d=null;
-        if(p.length===3) d=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);
-        if(d&&!isNaN(d)) gunStr=" <span style='color:var(--success);font-size:10px;font-weight:600'>"+["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"][d.getDay()]+"</span>";
+        const parts = rawTarih.split(/\s+/);
+        const p = parts[0].split(/[\/\-]/);
+        const [hh,mm] = (parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
+        let d = null;
+        if(p.length===3) d = p[0].length===4 ? new Date(p[0],p[1]-1,p[2],hh,mm) : new Date(p[2],p[1]-1,p[0],hh,mm);
+        if(d && !isNaN(d.getTime())){
+          gunStr = " <span style='color:var(--success);font-size:10px;font-weight:600'>"+["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"][d.getDay()]+"</span>";
+          if(parts[1]) timeStr = " <span style='color:var(--text3);font-size:10px'>"+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})+"</span>";
+        }
       }
       const musteri = r.cust_name || r.customer_name || "—";
-      return "<tr style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td style='color:var(--text3)'>—</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarihStr+gunStr+"</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
+      // Shopier bonus (hediye kurallarına göre otomatik)
+      const scBonus = calcBonusAmt(r.collection||0, "Shopier");
+      const bonusCell = scBonus>0 ? "<span style='color:var(--warning)'>"+fmt(scBonus)+"</span>" : "—";
+      return "<tr style='opacity:.85'><td style='font-weight:600'>"+musteri+"</td><td><span class='tbadge' style='background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.3)'>Shopier Tahsilat</span></td><td style='color:var(--success);font-weight:700'>"+fmt(r.collection||0)+"</td><td>"+bonusCell+"</td><td><span style='font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)'>🤖 Shopier</span></td><td style='color:var(--text3);font-size:11px'>"+tarihStr+gunStr+timeStr+"</td><td style='color:var(--text3);font-size:11px'>"+(r.order_id||"—")+"</td></tr>";
     });
     rows=rows.concat(colRows);
   } else if(tab==="all" && (!shopierCollections||!shopierCollections.length)){
@@ -3598,13 +3589,25 @@ function updateXLStats(){
 
 function renderRaporlar(){
   const active=transactions.filter(t=>!t.cancelled);
-  // Shopier tahsilatlarını da ekle
+  // Shopier tahsilatlarını da ekle (saat parse + otomatik bonus hesabı)
   const scItems=(shopierCollections||[]).map(r=>{
-    const raw=r.payment_date||r.order_date||"";
+    const raw=(r.payment_date||r.order_date||"").trim();
     let ca=null;
-    if(raw){const p=raw.trim().split(/[\/\-]/);if(p.length===3)ca=p[0].length===4?new Date(p[0],p[1]-1,p[2]):new Date(p[2],p[1]-1,p[0]);}
+    if(raw){
+      const parts=raw.split(/\s+/);
+      const p=parts[0].split(/[\/\-]/);
+      const [hh,mm]=(parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
+      if(p.length===3) ca=p[0].length===4?new Date(p[0],p[1]-1,p[2],hh,mm):new Date(p[2],p[1]-1,p[0],hh,mm);
+    }
     const isoStr = (ca && !isNaN(ca.getTime())) ? ca.toISOString() : null;
-    return {amount:r.collection||0,type:"Shopier Tahsilat",created_at:isoStr,date:raw.substring(0,10),cust_name:r.cust_name||r.customer_name||"Shopier",bonus:0};
+    return {
+      amount:r.collection||0,
+      type:"Shopier Tahsilat",
+      created_at:isoStr,
+      date:raw.substring(0,10),
+      cust_name:r.cust_name||r.customer_name||"Shopier",
+      bonus:calcBonusAmt(r.collection||0,"Shopier")
+    };
   });
   const allItems=[...active,...scItems];
   const GUNLER=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
@@ -3736,10 +3739,10 @@ function renderRaporlar(){
     return `<div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--text2)">${s.label}</span><span style="font-size:11px;font-weight:600;color:${s.color}">${s.cnt} üye ${pct}%</span></div><div style="height:6px;background:var(--border);border-radius:3px"><div style="height:6px;width:${pct}%;background:${s.color};border-radius:3px;transition:width .5s"></div></div></div>`;
   }).join("");
 
-  // ── Bonus analizi ─────────────────────────────────────────
-  const bonusTx=active.filter(t=>t.bonus>0);
+  // ── Bonus analizi (transactions + shopier tahsilat bonusları) ─────
+  const bonusTx=allItems.filter(t=>t.bonus>0);
   const totalBonus3=bonusTx.reduce((s,t)=>s+t.bonus,0);
-  const totalInc3=active.reduce((s,t)=>s+t.amount,0)||1;
+  const totalInc3=allItems.reduce((s,t)=>s+t.amount,0)||1;
   const bonusRate=((totalBonus3/totalInc3)*100).toFixed(1);
   const bonusByType={};
   bonusTx.forEach(t=>{if(!bonusByType[t.type])bonusByType[t.type]={bonus:0,cnt:0};bonusByType[t.type].bonus+=t.bonus;bonusByType[t.type].cnt++;});
