@@ -4065,19 +4065,20 @@ async function renderDashboard(){
   document.getElementById("db-today-income").textContent = fmt(todayIncome);
   document.getElementById("db-month-income").textContent = "Bu ay: "+fmt(monthIncome);
   document.getElementById("db-active-members").textContent = activeMembers;
-  document.getElementById("db-today-new").textContent = "Bugün yeni: "+todayNew;
-  document.getElementById("db-pending-debt").textContent = fmt(pendingDebt);
-  document.getElementById("db-debt-count").textContent = debtCount+" borçlu";
-  document.getElementById("db-total-income").textContent = fmt(totalIncome);
-  document.getElementById("db-total-expense").textContent = fmt(totalExpense2);
-  document.getElementById("db-total-bonus").textContent = fmt(totalBonus2);
-  document.getElementById("db-bonus-count").textContent = activeTx.filter(t=>t.bonus>0).length+" işlemde";
+  const $sd = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  $sd("db-today-new", "Bugün yeni: "+todayNew);
+  $sd("db-pending-debt", fmt(pendingDebt));
+  $sd("db-debt-count", debtCount+" borçlu");
+  $sd("db-total-income", fmt(totalIncome));
+  $sd("db-total-expense", fmt(totalExpense2));
+  $sd("db-total-bonus", fmt(totalBonus2));
+  $sd("db-bonus-count", activeTx.filter(t=>t.bonus>0).length+" işlemde");
   const dbNetEl = document.getElementById("db-net-kasa");
   if(dbNetEl){ dbNetEl.textContent = fmt(netKasa); dbNetEl.style.color = netKasa>=0?"var(--success)":"var(--danger)"; }
 
   // Son import
   const lastImportLog = logs.find(l=>l.action==="import");
-  document.getElementById("db-last-import").textContent = lastImportLog ? lastImportLog.ts+" · "+lastImportLog.user_name : "—";
+  $sd("db-last-import", lastImportLog ? lastImportLog.ts+" · "+lastImportLog.user_name : "—");
 
   // Bu ay en çok yükleme yapan 5 üye (Shopier tahsilatları dahil)
   const txTotals={};
