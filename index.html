@@ -3968,7 +3968,13 @@ function renderRaporlar(){
 
   // ── En sadık üye ──────────────────────────────────────────
   const memberMap={};
-  allItems.forEach(t=>{if(!t.cust_id)return;if(!memberMap[t.cust_id])memberMap[t.cust_id]={name:t.cust_name,total:0,cnt:0};memberMap[t.cust_id].total+=t.amount;memberMap[t.cust_id].cnt++;});
+  allItems.forEach(t=>{
+    const key = (t.cust_name||"").toLowerCase().trim();
+    if(!key) return;
+    if(!memberMap[key]) memberMap[key]={name:t.cust_name,total:0,cnt:0};
+    memberMap[key].total+=t.amount;
+    memberMap[key].cnt++;
+  });
   const topMember=Object.values(memberMap).sort((a,b)=>b.total-a.total)[0];
   if(topMember&&$("rpr-top-member")) $("rpr-top-member").textContent=topMember.name;
   if(topMember&&$("rpr-top-member-amt")) $("rpr-top-member-amt").textContent=fmt(topMember.total)+" · "+topMember.cnt+" işlem";
