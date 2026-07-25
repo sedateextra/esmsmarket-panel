@@ -2971,38 +2971,7 @@ async function kriptoBakiyeDuzenle(){
     document.querySelector("#aktarim-onay-overlay .btn-save").onclick = aktarimKesinOnayla;
   };
 }
-  const mevcut = window._kasaKripto||0;
-  const yeni = prompt("Kripto bakiye düzeltme\n\nMevcut: "+fmt(mevcut)+"\n\nYeni bakiye girin (₺):", mevcut.toFixed(2));
-  if(yeni===null) return;
-  const yeniTutar = parseFloat(yeni);
-  if(isNaN(yeniTutar)){ showToast("⚠️ Geçerli bir tutar girin."); return; }
-  const fark = yeniTutar - mevcut;
-  if(Math.abs(fark)<0.01){ showToast("ℹ️ Fark yok."); return; }
-  if(!confirm("Kripto bakiye "+fmt(mevcut)+" → "+fmt(yeniTutar)+"\nFark: "+(fark>0?"+":"")+fmt(fark)+"\n\nOnaylıyor musunuz?")) return;
-  showLoading(true);
-  const ts = new Date().toLocaleString("tr-TR");
-  const dateStr = new Date().toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
-  if(fark>0){
-    // Artırma: transactions'a Kripto olarak ekle (isimsiz düzeltme)
-    await db.from("transactions").insert({
-      cust_id:0, cust_name:"Kripto Düzeltme", amount:fark, bonus:0, type:"Kripto",
-      note:"Bakiye düzeltme", user_name:currentUser, date:dateStr
-    });
-  } else {
-    // Azaltma: expenses'a "Kripto Aktarım" gider olarak ekle
-    await db.from("expenses").insert({
-      type:"Kripto Aktarım", amount:Math.abs(fark),
-      note:"Bakiye düzeltme (azaltma)",
-      user_name:currentUser, date:dateStr
-    });
-  }
-  await addLog("edit","Kripto bakiye düzeltme: "+fmt(fark),"Fiziksel sayım");
-  await sendTelegram("₿ <b>Kripto Bakiye Düzeltme</b>\n📊 Eski: "+fmt(mevcut)+"\n📊 Yeni: <b>"+fmt(yeniTutar)+"</b>\n🔄 Fark: <b>"+(fark>0?"+":"")+fmt(fark)+"</b>\n⏰ "+ts+"\n👤 "+currentUser);
-  await loadAll();
-  updateKasaMetrics();
-  showLoading(false);
-  showToast("✅ Kripto bakiyesi güncellendi!");
-}
+  
 function openNakitDuzenle(){
   const nakitTop=(nakitHareketler||[]).reduce((s,n)=>s+(n.amount||0),0);
   const havaleTop=transactions.filter(t=>!t.cancelled&&(t.type==="Havale"||t.type==="Havale/EFT")).reduce((s,t)=>s+t.amount,0);
