@@ -3888,13 +3888,6 @@ function renderRaporlar(){
       date:raw.substring(0,10),
       cust_name:r.cust_name||r.customer_name||"Shopier",
       cust_id:r.cust_id||("shopier-"+(r.customer_email||r.customer_name||"")),
-      bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier") ca.toISOString() : null;
-    return {
-      amount:r.collection||0,
-      type:"Shopier Tahsilat",
-      created_at:isoStr,
-      date:raw.substring(0,10),
-      cust_name:r.cust_name||r.customer_name||"Shopier",
       bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier")
     };
   });
