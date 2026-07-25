@@ -637,11 +637,11 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
     </div>
     <div class="metric-top-bar" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">
 
-      <!-- Shopier Net -->
+      <!-- Shopier Gelecek Ödeme -->
       <div class="metric" style="border:1px solid rgba(16,185,129,.3);background:rgba(16,185,129,.05);position:relative">
-        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier (net)</div>
+        <div class="lbl"><i class="ti ti-brand-shopee" style="color:var(--success)"></i>Shopier bekleyen</div>
         <div class="val" id="k-shopier-net" style="color:var(--success)">₺0</div>
-        <div class="sub" id="k-shopier-net-sub"></div>
+        <div class="sub" id="k-shopier-net-sub" style="color:var(--warning)">—</div>
         <div style="display:flex;gap:5px;margin-top:8px">
           <button onclick="openAktarimModal('shopier')" style="flex:1;font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.1);color:var(--success);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:600">
             <i class="ti ti-arrows-transfer-down"></i> Aktar
@@ -2434,9 +2434,22 @@ function updateKasaMetrics(){
   // Shopier net gelir (tahsilatlar dahil, komisyon düşülmüş)
   const shopierBrut=active.filter(t=>t.type==="Shopier"||t.user_name==="shopier-bot").reduce((s,t)=>s+t.amount,0);
   const shopierTahsilat=(shopierCollections||[]).reduce((s,r)=>s+(r.collection||0),0);
-  const shopierNet=shopierBrut+shopierTahsilat-shopierKomTotal;
+  const _today = new Date(); _today.setHours(0,0,0,0);
+  const _upcoming = (shopierCollections||[]).filter(r=>{
+    if(!r.planned_date) return false;
+    const p = r.planned_date.trim().split(/[\/\-]/);
+    if(p.length!==3) return false;
+    const d = p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
+    return !isNaN(d.getTime()) && d>=_today;
+  });
+  const shopierBekleyenTutar = _upcoming.reduce((s,r)=>s+(r.collection||0),0);
+  const _nextDate = _upcoming.map(r=>{
+    const p = r.planned_date.trim().split(/[\/\-]/);
+    return p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
+  }).filter(d=>!isNaN(d.getTime())).sort((a,b)=>a-b)[0];
+  const _nextDateStr = _nextDate ? _nextDate.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
   const shopierNetEl=document.getElementById("k-shopier-net");
-  if(shopierNetEl) shopierNetEl.textContent=fmt(shopierNet);
+  if(shopierNetEl) shopierNetEl.textContent=fmt(shopierBekleyenTutar);
   const shopierNetSub=document.getElementById("k-shopier-net-sub");
   // Gelecek Shopier ödemesi (planned_date >= bugün)
   const _today = new Date(); _today.setHours(0,0,0,0);
@@ -2663,11 +2676,11 @@ function openAktarimModal(kaynak){
   _aktarimKaynak = kaynak;
   _aktarimHedef  = null;
 
-  const tutar = kaynak==="shopier" ? (window._kasaShopierNet||0)
+  const tutar = kaynak==="shopier" ? (window._kasaShopierBekleyen||0)
                : kaynak==="nakit"   ? (window._kasaNakit||0)
                :                      (window._kasaKripto||0);
 
-  const kaynakLabel = kaynak==="shopier" ? "🤖 Shopier Net"
+  const kaynakLabel = kaynak==="shopier" ? "📅 Shopier Bekleyen"
                     : kaynak==="nakit"   ? "💵 Nakit Kasa"
                     :                     "₿ Kripto";
 
@@ -2691,7 +2704,7 @@ function secAktarimHedef(hedef, btn){
 }
 
 function aktarimTumunu(){
-  const tutar = _aktarimKaynak==="shopier" ? (window._kasaShopierNet||0)
+  const tutar = _aktarimKaynak==="shopier" ? (window._kasaShopierBekleyen||0)
               : _aktarimKaynak==="nakit"   ? (window._kasaNakit||0)
               :                               (window._kasaKripto||0);
   document.getElementById("aktarim-tutar").value = tutar.toFixed(2);
@@ -2703,7 +2716,7 @@ function updateAktarimOnay(){
   const onayBox = document.getElementById("aktarim-onay-box");
   const btn = document.getElementById("aktarim-onayla-btn");
   if(tutar>0 && _aktarimHedef){
-    const kaynakLabel = _aktarimKaynak==="shopier"?"🤖 Shopier Net":_aktarimKaynak==="nakit"?"💵 Nakit":_aktarimKaynak==="kripto"?"₿ Kripto":"";
+    const kaynakLabel = _aktarimKaynak==="shopier"?"📅 Shopier Bekleyen":_aktarimKaynak==="nakit"?"💵 Nakit":_aktarimKaynak==="kripto"?"₿ Kripto":"";
     document.getElementById("aktarim-onay-detay").innerHTML =
       `<b>Kaynak:</b> ${kaynakLabel}<br><b>Tutar:</b> ${fmt(tutar)}<br><b>Hedef:</b> ${AKTARIM_HEDEF_LABELS[_aktarimHedef]}<br><b>Not:</b> ${document.getElementById("aktarim-not").value||"—"}`;
     onayBox.style.display="block";
@@ -2718,14 +2731,14 @@ function aktarimOnayla(){
   const tutar = parseFloat(document.getElementById("aktarim-tutar").value)||0;
   if(!tutar||!_aktarimHedef) return;
   // Bakiye kontrolü
-  const mevcut = _aktarimKaynak==="shopier" ? (window._kasaShopierNet||0)
+  const mevcut = _aktarimKaynak==="shopier" ? (window._kasaShopierBekleyen||0)
                : _aktarimKaynak==="nakit"   ? (window._kasaNakit||0)
                :                              (window._kasaKripto||0);
   if(tutar > mevcut){
     showToast("❌ Yetersiz bakiye! Maksimum: "+fmt(mevcut));
     return;
   }
-  const kaynakLabel = _aktarimKaynak==="shopier"?"🤖 Shopier Net":_aktarimKaynak==="nakit"?"💵 Nakit Kasa":"₿ Kripto";
+  const kaynakLabel = _aktarimKaynak==="shopier"?"📅 Shopier Bekleyen":_aktarimKaynak==="nakit"?"💵 Nakit Kasa":"₿ Kripto";
   const not = document.getElementById("aktarim-not").value||"";
   document.getElementById("aktarim-son-ozet").innerHTML =
     `<b>Kaynak:</b> ${kaynakLabel}<br><b>Aktarılan tutar:</b> <span style="color:var(--success);font-weight:700">${fmt(tutar)}</span><br><b>Hedef:</b> ${AKTARIM_HEDEF_LABELS[_aktarimHedef]}<br><b>Not:</b> ${not||"—"}`;
@@ -2739,7 +2752,7 @@ async function aktarimKesinOnayla(){
   document.getElementById("aktarim-onay-overlay").style.display="none";
   showLoading(true);
 
-  const kaynakLabel = _aktarimKaynak==="shopier"?"Shopier Net":_aktarimKaynak==="nakit"?"Nakit Kasa":"Kripto";
+  const kaynakLabel = _aktarimKaynak==="shopier"?"Shopier Bekleyen":_aktarimKaynak==="nakit"?"Nakit Kasa":"Kripto";
   const hedefLabel  = AKTARIM_HEDEF_LABELS[_aktarimHedef];
   const ts = new Date().toLocaleString("tr-TR");
 
