@@ -1587,7 +1587,7 @@ async function doLogin(){
     await loadAll();
     startSessionTimer();
     initDash();
-    scheduleNightReport();
+    // scheduleNightReport(); // Edge Function cron ile değiştirildi
     setupRealtime();
     addLog("login","Sisteme giriş","—");
   } else {
@@ -4824,7 +4824,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     await loadAll();
     startSessionTimer();
     initDash();
-    scheduleNightReport();
+    // scheduleNightReport(); // Edge Function cron ile değiştirildi
     setupRealtime();
   } else {
     localStorage.removeItem("esms_user");
