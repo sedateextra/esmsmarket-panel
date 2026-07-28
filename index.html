@@ -1579,6 +1579,7 @@ async function doLogin(){
     startSessionTimer();
     initDash();
     scheduleNightReport();
+    setupRealtime();
     addLog("login","Sisteme giriş","—");
   } else {
     const e = document.getElementById("login-err");
@@ -1599,6 +1600,46 @@ async function doLogout(auto=false){
   document.getElementById("login-user").value="";
   document.getElementById("login-pass").value="";
   document.getElementById("timeout-warning").style.display="none";
+}
+
+// ============================================================
+// SUPABASE REALTIME — canlı senkronizasyon
+// ============================================================
+let realtimeChannel = null;
+let realtimeDebounce = null;
+
+function setupRealtime(){
+  if(realtimeChannel) return;
+  realtimeChannel = db.channel("panel-sync")
+    .on("postgres_changes", { event:"*", schema:"public", table:"transactions" }, ()=>refreshFromRealtime("transactions"))
+    .on("postgres_changes", { event:"*", schema:"public", table:"customers" }, ()=>refreshFromRealtime("customers"))
+    .on("postgres_changes", { event:"*", schema:"public", table:"expenses" }, ()=>refreshFromRealtime("expenses"))
+    .on("postgres_changes", { event:"*", schema:"public", table:"borclar" }, ()=>refreshFromRealtime("borclar"))
+    .on("postgres_changes", { event:"*", schema:"public", table:"shopier_collections" }, ()=>refreshFromRealtime("shopier_collections"))
+    .on("postgres_changes", { event:"*", schema:"public", table:"logs" }, ()=>refreshFromRealtime("logs"))
+    .subscribe();
+}
+
+function refreshFromRealtime(table){
+  clearTimeout(realtimeDebounce);
+  realtimeDebounce = setTimeout(async ()=>{
+    console.log("[Realtime] "+table+" değişti, yeniden yükleniyor...");
+    await loadAll();
+    const active = document.querySelector(".page.active");
+    if(!active) return;
+    const id = active.id.replace("page-","");
+    try {
+      if(id==="dashboard") renderDashboard();
+      else if(id==="musteriler") { renderCustomers(); renderSidebar(); }
+      else if(id==="kasa") updateKasaMetrics();
+      else if(id==="borclu") renderBorcular();
+      else if(id==="top10") renderTop10();
+      else if(id==="raporlar") renderRaporlar();
+      else if(id==="log") renderLog();
+      else if(id==="mail") renderMailPage();
+    } catch(e){ console.error("Render hatası:", e); }
+    showToast("🔄 Veriler güncellendi");
+  }, 800);
 }
 
 function initDash(){
@@ -1635,11 +1676,11 @@ function showPage(id,btn){
     if(kasaTableCard) kasaTableCard.style.display="block";
     setTimeout(()=>{renderChart();updateKasaMetrics();},50);
   }
-  if(id==="top10") renderTop10();
-  if(id==="raporlar") renderRaporlar();
+  if(id==="top10"){ loadAll().then(()=>renderTop10()); }
+  if(id==="raporlar"){ loadAll().then(()=>renderRaporlar()); }
   if(id==="mail") renderMailPage();
   if(id==="bonus-rules") renderBonusRulesEditor();
-  if(id==="dashboard") setTimeout(renderDashboard,50);
+  if(id==="dashboard"){ loadAll().then(()=>setTimeout(renderDashboard,50)); }
 
 }
 
@@ -4739,6 +4780,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     startSessionTimer();
     initDash();
     scheduleNightReport();
+    setupRealtime();
   } else {
     localStorage.removeItem("esms_user");
     localStorage.removeItem("esms_login_time");
