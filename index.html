@@ -2110,26 +2110,38 @@ async function openBalanceHistory(custId){
 }
 
 function renderSidebar(){
-  const active=transactions.filter(t=>!t.cancelled).slice(0,5);
-  const icClass=t=>t.type==="Havale"?"ic-bank":t.type==="Kripto"?"ic-crypto":"ic-card";
-  const tGrads={"Havale":"linear-gradient(135deg,#3b82f6,#1d4ed8)","Shopier":"linear-gradient(135deg,#10b981,#047857)","Kripto":"linear-gradient(135deg,#f59e0b,#d97706)"};
-  document.getElementById("tx-list").innerHTML=active.length?active.map(t=>{
-    const isS=t.user_name==="shopier-bot";
-    const gr=isS?"linear-gradient(135deg,#10b981,#047857)":(tGrads[t.type]||"var(--card2)");
-    const em=isS?"🤖":({"Havale":"🏦","Shopier":"🤖","Kripto":"₿"}[t.type]||"💰");
-    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-      <div style="width:30px;height:30px;border-radius:8px;background:${gr};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${em}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.cust_name}</div>
-        <div style="font-size:10px;color:var(--text3)">${t.type}${isS?" · 🤖 Shopier":""}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:12px;font-weight:700;color:var(--success)">${fmt(t.amount)}</div>
-        <div style="font-size:10px;color:var(--text3)">${t.date||""}</div>
-      </div>
-    </div>`;
-  }).join(""):'<div style="font-size:12px;color:var(--text3);padding:.5rem 0;text-align:center">Henüz işlem yok.</div>';
-}
+  const activeTx = transactions.filter(t=>!t.cancelled);
+  // Shopier tahsilatlarını da dahil et (tarih+saat parse)
+  const parseScSb = (raw)=>{
+    if(!raw) return null;
+    const parts=raw.trim().split(/\s+/);
+    const p=parts[0].split(/[\/\-]/);
+    if(p.length!==3) return null;
+    const [hh,mm]=(parts[1]||"00:00").split(":").map(x=>parseInt(x)||0);
+    const y2=p[2].length===2?2000+parseInt(p[2]):parseInt(p[2]);
+    return p[0].length===4?new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]),hh,mm):new Date(y2,parseInt(p[1])-1,parseInt(p[0]),hh,mm);
+  };
+  const scItems = (shopierCollections||[]).map(r=>{
+    const d = parseScSb(r.payment_date||r.order_date||"");
+    return {
+      cust_name: r.cust_name||r.customer_name||"Shopier",
+      amount: r.collection||0,
+      type: "Shopier Tahsilat",
+      user_name: "shopier-col",
+      created_at: (d && !isNaN(d.getTime())) ? d.toISOString() : null,
+      date: (r.payment_date||r.order_date||"").substring(0,10)
+    };
+  });
+  const merged = [...activeTx, ...scItems].filter(t=>t.created_at).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
+  const tGrads={"Havale":"linear-gradient(135deg,#3b82f6,#1d4ed8)","Shopier":"linear-gradient(135deg,#10b981,#047857)","Kripto":"linear-gradient(135deg,#f59e0b,#d97706)","Shopier Tahsilat":"linear-gradient(135deg,#10b981,#047857)"};
+  document.getElementById("tx-list").innerHTML=merged.length?merged.map(t=>{
+    const isS=t.user_name==="shopier-bot"||t.user_name==="shopier-col";
+    const gr=tGrads[t.type]||"var(--card2)";
+    const em=isS?"🤖":({"Havale":"🏦","Kripto":"₿","Shopier Tahsilat":"📊"}[t.type]||"💰");
+    let tarihSaat = t.date||"";
+    try {
+      const d = new Date(t.created_at);
+      if(!isNaN(d.getTime())) tarihSaat = d.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit"})+"
 
 // ============================================================
 // TOP 10
@@ -2554,7 +2566,12 @@ function updateKasaMetrics(){
   const scList = shopierCollections||[];
   const shopierTahsilatToplam = scList.reduce((s,r)=>s+(r.collection||0),0);
   // Her tahsilata bonus kuralına göre otomatik bonus hesapla (Shopier tipi kuralı)
-  const shopierTahsilatBonus = scList.reduce((s,r)=>s+calcBonusAmt(r.sales_price||r.collection||0,"Shopier"),0);
+  const shopierTahsilatBonus = scList.reduce((s,r)=>{
+    const sp = r.sales_price||r.collection||0;
+    // 500'ün en yakın alt katına yuvarla (1030 → 1000)
+    const yatirim = Math.floor(sp/500)*500;
+    return s + calcBonusAmt(yatirim, "Shopier");
+  }, 0);
   const totalIncome=active.reduce((s,t)=>s+t.amount,0) + shopierTahsilatToplam;
   const totalBonus=active.reduce((s,t)=>s+t.bonus,0) + shopierTahsilatBonus;
   const totalExpense=expenses.reduce((s,e)=>s+e.amount,0);
@@ -2749,7 +2766,8 @@ const kriptoToplam=kriptoGelir-kriptoAktarim;
       }
       const musteri = r.cust_name || r.customer_name || "—";
       // Shopier bonus (hediye kurallarına göre otomatik)
-      const scBonus = calcBonusAmt(r.sales_price||r.collection||0, "Shopier");
+      const _sp = r.sales_price||r.collection||0;
+      const scBonus = calcBonusAmt(Math.floor(_sp/500)*500, "Shopier");
       const bonusCell = scBonus>0 ? "<span style='color:var(--warning)'>"+fmt(scBonus)+"</span>" : "—";
       // Sıralama için timestamp
       let sortTs = 0;
@@ -3984,7 +4002,7 @@ function renderRaporlar(){
       date:raw.substring(0,10),
       cust_name:r.cust_name||r.customer_name||"Shopier",
       cust_id:r.cust_id||("shopier-"+(r.customer_email||r.customer_name||"")),
-      bonus:calcBonusAmt(r.sales_price||r.collection||0,"Shopier")
+      bonus:(function(){const sp=r.sales_price||r.collection||0;return calcBonusAmt(Math.floor(sp/500)*500,"Shopier");})()
     };
   });
   const allItems=[...active,...scItems];
@@ -4520,16 +4538,19 @@ async function renderDashboard(){
     if(p.length!==3) return null;
     return p[0].length===4 ? new Date(p[0],p[1]-1,p[2]) : new Date(p[2],p[1]-1,p[0]);
   };
-  const scTx = (shopierCollections||[]).map(r=>({
-    amount    : r.collection||0,
-    bonus     : 0,
-    type      : "Shopier Tahsilat",
-    cust_name : r.cust_name||r.customer_name||"Shopier",
-    user_name : "shopier-col",
-    date      : (r.payment_date||r.order_date||"").substring(0,10),
-    created_at: r.payment_date||r.order_date||null,
-    note      : r.order_id||""
-  }));
+  const scTx = (shopierCollections||[]).map(r=>{
+    const d = parseScDate(r);
+    return {
+      amount    : r.collection||0,
+      bonus     : 0,
+      type      : "Shopier Tahsilat",
+      cust_name : r.cust_name||r.customer_name||"Shopier",
+      user_name : "shopier-col",
+      date      : (r.payment_date||r.order_date||"").substring(0,10),
+      created_at: (d && !isNaN(d.getTime())) ? d.toISOString() : null,
+      note      : r.order_id||""
+    };
+  });
   const allTx = [...activeTx, ...scTx];
 
   // Bugünkü gelir
