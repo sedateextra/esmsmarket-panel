@@ -1161,6 +1161,14 @@ body.light-theme .xl-drop:hover{background:rgba(139,92,246,.04)}
         <div class="modal-hdr"><h3 id="payment-modal-title">Ödeme al</h3><button onclick="closeBorcPayment()"><i class="ti ti-x"></i></button></div>
         <div id="payment-borc-info" style="padding:10px;border-radius:9px;background:var(--bg2);border:1px solid var(--border);margin-bottom:12px;font-size:13px"></div>
         <div class="frow"><label>Alınan ödeme (₺)</label><input type="number" id="payment-amount" placeholder="0" min="0" step="0.01"></div>
+        <div class="frow"><label>Ödeme nereye aktarılsın?</label>
+          <select id="payment-target" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px">
+            <option value="nakit">💵 Nakit kasa (varsayılan)</option>
+            <option value="kripto">₿ Kripto</option>
+            <option value="shopier">🤖 Shopier bekleyen</option>
+            <option value="diger">📌 Diğer (kayıt tutma, kasaya işleme)</option>
+          </select>
+        </div>
         <div class="frow"><label>Not</label><input type="text" id="payment-note" placeholder="Ödeme notu..."></div>
         <div class="btn-row">
           <button class="btn-save" onclick="saveBorcPayment()"><i class="ti ti-check" style="margin-right:4px"></i>Ödemeyi kaydet</button>
@@ -4501,20 +4509,70 @@ function closeBorcPayment(){document.getElementById("borc-payment-overlay").clas
 async function saveBorcPayment(){
   const amt = parseFloat(document.getElementById("payment-amount").value)||0;
   const note = document.getElementById("payment-note").value.trim();
+  const target = document.getElementById("payment-target")?.value || "nakit";
   if(!amt){alert("Tutar zorunludur.");return;}
   const b = borclar.find(x=>x.id===borcPaymentTargetId);
   b.paid = (b.paid||0)+amt;
   if(!b.payments) b.payments=[];
-  b.payments.push({amount:amt,note,date:nowStr()});
+  b.payments.push({amount:amt,note,date:nowStr(),target});
   if(b.paid>=b.amount) b.status="Ödendi";
   else if(b.paid>0) b.status="Kısmi ödendi";
   showLoading(true);
   await db.from("borclar").update({paid:b.paid,status:b.status,payments:b.payments}).eq("id",b.id);
-  addLog("add",`Ödeme alındı — ${fmt(amt)}`,b.name);
-  tgBorcOdeme(b, amt);
+  addLog("add",`Ödeme alındı — ${fmt(amt)} → ${target}`,b.name);
+
+  const ts = new Date().toLocaleString("tr-TR");
+  const dateStr = new Date().toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const targetLabels = {nakit:"💵 Nakit kasa", kripto:"₿ Kripto", shopier:"🤖 Shopier bekleyen", diger:"📌 Diğer"};
+  const targetLabel = targetLabels[target]||target;
+
+  // Ödemeyi kaynağa aktar
+  if(target==="nakit"){
+    const {data} = await db.from("logs").insert({
+      action:"nakit",
+      detail:`Borç ödemesi — ${b.name}`,
+      target:note||b.name,
+      user_name:currentUser, ts,
+      amount:amt
+    }).select();
+    if(data&&data[0]) nakitHareketler.unshift(data[0]);
+  } else if(target==="kripto"){
+    const {data} = await db.from("transactions").insert({
+      cust_id:0, cust_name:`Borç ödemesi — ${b.name}`,
+      amount:amt, bonus:0, total:amt, type:"Kripto",
+      note:`Borç ödemesi (${b.name})`+(note?" — "+note:""),
+      user_name:currentUser, date:dateStr, cancelled:false
+    }).select();
+    if(data&&data[0]) transactions.unshift(data[0]);
+  } else if(target==="shopier"){
+    // Shopier bekleyene aktarım — planned_date'i bugün+7 yapan bir tahsilat kaydı
+    const planTarih = new Date(); planTarih.setDate(planTarih.getDate()+7);
+    const planStr = planTarih.getDate().toString().padStart(2,"0")+"/"+(planTarih.getMonth()+1).toString().padStart(2,"0")+"/"+planTarih.getFullYear();
+    await db.from("shopier_collections").insert({
+      order_id: "BORC-"+b.id+"-"+Date.now(),
+      customer_name: b.name,
+      customer_email: "",
+      sales_price: amt,
+      service_fee: 0,
+      vat: 0,
+      collection: amt,
+      order_date: dateStr,
+      payment_date: dateStr+" "+new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}),
+      planned_date: planStr,
+      cust_name: b.name
+    });
+  }
+  // "diger" ise sadece log tutulur, kasaya işlenmez
+
+  // Telegram bildirim
+  await sendTelegram(`💰 <b>Borç Ödemesi Alındı</b>\n━━━━━━━━━━━━━━\n👤 ${b.name}\n💵 Alınan: <b>${fmt(amt)}</b>\n📥 Aktarılan yer: <b>${targetLabel}</b>\n📊 Toplam borç: ${fmt(b.amount)}\n✅ Ödenen toplam: ${fmt(b.paid)}\n⚠️ Kalan: ${fmt(b.amount-b.paid)}\n📊 Durum: <b>${b.status}</b>${note?"\n📝 Not: "+note:""}\n⏰ ${ts}\n👤 ${currentUser}`);
+
   showLoading(false);
   closeBorcPayment();
   renderBorcular();
+  await loadAll();
+  updateKasaMetrics();
+  showToast("✅ Ödeme kaydedildi ve "+targetLabel+"'ya aktarıldı.");
 }
 
 function exportBorcExcel(){
