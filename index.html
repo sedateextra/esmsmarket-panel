@@ -1597,6 +1597,8 @@ async function doLogin(){
     initDash();
     // scheduleNightReport(); // Edge Function cron ile değiştirildi
     setupRealtime();
+    await fetchUsdtRate();
+    setInterval(fetchUsdtRate, 5*60*1000);
     addLog("login","Sisteme giriş","—");
   } else {
     const e = document.getElementById("login-err");
@@ -2669,7 +2671,10 @@ const kriptoToplam=kriptoGelir-kriptoAktarim;
   const kriptoEl=document.getElementById("k-kripto");
   if(kriptoEl) kriptoEl.textContent=fmt(kriptoToplam);
   const kriptoSub=document.getElementById("k-kripto-sub");
-  if(kriptoSub) kriptoSub.textContent=active.filter(t=>t.type==="Kripto").length+" işlem";
+  if(kriptoSub){
+    const usdtAmount = USDT_TRY > 0 ? (kriptoToplam/USDT_TRY) : 0;
+    kriptoSub.innerHTML = `<span style="color:var(--warning);font-weight:600">≈ ${usdtAmount.toLocaleString("tr-TR",{maximumFractionDigits:2})} USDT</span> · <span style="color:var(--text3)">1 USDT = ₺${USDT_TRY.toFixed(2)}</span>`;
+  }
 
   // Global değişkenlere aktar (aktarım modalı için)
   window._kasaShopierNet=shopierNet;
