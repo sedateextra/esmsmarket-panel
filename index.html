@@ -2959,8 +2959,13 @@ function updateAktarimOnay(){
   const btn = document.getElementById("aktarim-onayla-btn");
   if(tutar>0 && _aktarimHedef){
     const kaynakLabel = _aktarimKaynak==="shopier"?"📅 Shopier Bekleyen":_aktarimKaynak==="nakit"?"💵 Nakit":_aktarimKaynak==="kripto"?"₿ Kripto":"";
+    let usdtLine = "";
+    if(_aktarimKaynak==="kripto" && USDT_TRY>0){
+      const usdt = tutar/USDT_TRY;
+      usdtLine = `<br><b>USDT karşılığı:</b> <span style="color:var(--warning);font-weight:700">${usdt.toLocaleString("tr-TR",{maximumFractionDigits:2})} USDT</span> <span style="color:var(--text3);font-size:10px">(1 USDT = ₺${USDT_TRY.toFixed(2)})</span>`;
+    }
     document.getElementById("aktarim-onay-detay").innerHTML =
-      `<b>Kaynak:</b> ${kaynakLabel}<br><b>Tutar:</b> ${fmt(tutar)}<br><b>Hedef:</b> ${AKTARIM_HEDEF_LABELS[_aktarimHedef]}<br><b>Not:</b> ${document.getElementById("aktarim-not").value||"—"}`;
+      `<b>Kaynak:</b> ${kaynakLabel}<br><b>Tutar:</b> ${fmt(tutar)}${usdtLine}<br><b>Hedef:</b> ${AKTARIM_HEDEF_LABELS[_aktarimHedef]}<br><b>Not:</b> ${document.getElementById("aktarim-not").value||"—"}`;
     onayBox.style.display="block";
     btn.disabled=false; btn.style.opacity="1";
   } else {
