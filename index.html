@@ -204,7 +204,7 @@
       <div class="glabel">Ekipler</div>
       <div class="navitem" data-page="temsilci" onclick="goPage('temsilci')">Temsilci Performansı</div>
       <div class="navitem" data-page="raporlar" onclick="goPage('raporlar')">Haftalık Raporlar</div>
-      <div class="navitem" data-page="cagri" onclick="goPage('cagri')">Çağrı Raporları</div>
+
     </div>
     <div class="navgroup">
       <div class="glabel">Kişisel</div>
@@ -268,7 +268,7 @@
       <!-- HAFTALIK RAPORLAR -->
       <div class="page" id="page-raporlar">
         <h1 class="page-title">Haftalık Raporlar</h1>
-        <div class="page-sub">Yatırımsız Gelenler'den dönüşen üyelerin haftalık ilk/devam yatırım performansı, temsilci bazında</div>
+        <div class="page-sub">Seçili dönemde ilk kez yatırım yapan üyelerin ilk/devam yatırım performansı, temsilci bazında</div>
         <div class="toolbar" style="justify-content:center;flex-wrap:wrap;">
           <button class="btn secondary" onclick="changeRaporHafta(-1)">‹ 7 gün geri</button>
           <div id="raporHaftaLabel" style="font-family:var(--font-display);font-size:18px;min-width:220px;text-align:center;"></div>
@@ -1497,7 +1497,6 @@ function renderRaporlarPage(){
     const trans = firstDepositTransition(login);
     if(!trans) return;
     if(trans.tarih < startKey || trans.tarih > endKey) return;
-    if(!qualifiesFromYatirimsiz(login, trans.tarih)) return;
     const hist = historyByLogin[login];
     let endRecord = null;
     for(let i=hist.length-1;i>=0;i--){
