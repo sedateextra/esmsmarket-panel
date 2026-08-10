@@ -1000,14 +1000,14 @@ async function exportRows(containerId){
 function checkGeriDonus(login, flaggedDate){
   const hist = historyByLogin[login] || [];
   const flaggedRecord = hist.find(h=>h.tarih === flaggedDate);
-  if(!flaggedRecord) return {yaptiMi:false, tarih:null};
+  if(!flaggedRecord) return {yaptiMi:false, tarih:null, fark:0};
   for(let i=0;i<hist.length;i++){
     if(hist[i].tarih <= flaggedDate) continue;
     if(hist[i].yatirim_adedi > flaggedRecord.yatirim_adedi || hist[i].toplam_yatirim > flaggedRecord.toplam_yatirim){
-      return {yaptiMi:true, tarih:hist[i].tarih};
+      return {yaptiMi:true, tarih:hist[i].tarih, fark: hist[i].toplam_yatirim - flaggedRecord.toplam_yatirim};
     }
   }
-  return {yaptiMi:false, tarih:null};
+  return {yaptiMi:false, tarih:null, fark:0};
 }
 function getPasifCandidates(viewDate, gunFilter){
   const result = [];
@@ -1105,10 +1105,10 @@ function renderCurrentPage(page){
         {label:'Kaç gündür pasif', render:r=>r._gunSayisi+' gün'},
         {label:'Takip Durumu', render:r=>{
           const gd = checkGeriDonus(r.login, viewDate);
-          return gd.yaptiMi ? `<span class="badge yeni">✅ ${gd.tarih} tarihinde yatırım yaptı</span>` : `<span class="badge pasif">❌ Henüz yatırım yapmadı</span>`;
+          return gd.yaptiMi ? `<span class="badge yeni">✅ ${gd.tarih} — +${fmtMoney(gd.fark)}</span>` : `<span class="badge pasif">❌ Henüz yatırım yapmadı</span>`;
         }, exportVal:r=>{
           const gd = checkGeriDonus(r.login, viewDate);
-          return gd.yaptiMi ? `Evet — ${gd.tarih}` : 'Hayır';
+          return gd.yaptiMi ? `Evet — ${gd.tarih} (+${gd.fark}₺)` : 'Hayır';
         }}
       ]
     });
